@@ -1,0 +1,425 @@
+.container {
+  font-family: 'Arial', sans-serif;
+  color: #333;
+  background-color: #f1f1f1;
+  min-height: 100vh;
+}
+
+.header {
+    background-color: #3f51b5;
+    padding: 20px;
+  }
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  color: #fff;
+  font-size: 24px;
+}
+
+.navLinks {
+  list-style: none;
+  display: flex;
+  gap: 15px;
+}
+
+.navLinks a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 18px;
+}
+
+.logoutButton {
+  background-color: transparent;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.logoutButton:hover {
+  color: #ff5c5c;
+}
+
+.main {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.storageInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  background-color: #f8f9fa;
+  border: 1px solid #cfd3d8;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.storageDetails {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.username {
+  font-size: 26px;
+  color: #084892;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.storageDetails p {
+  margin: 4px 0;
+  font-size: 18px;
+  color: #5a5a5a;
+}
+
+.chartContainer {
+  margin-left: 30px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.storageStats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+
+.storageStat {
+  margin-right: 20px;
+}
+
+.storageStatValue {
+  font-size: 20px;
+  color: #0070f3;
+  font-weight: bold;
+}
+
+.storageStatLabel {
+  font-size: 14px;
+  color: #5a5a5a;
+}
+
+
+.fileTypeSummary {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.fileTypeItem {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 10px;
+  text-align: center;
+  width: 150px;
+  justify-content: center;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.iconContainer {
+  font-size: 2rem;
+  color: #0070f3;
+  margin-bottom: 10px;
+}
+
+.fileTypeText {
+  text-align: center;
+  font-size: 14px;
+  color: #333;
+}
+
+.searchContainer {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  font-size: 20px;
+  color: #333;
+  margin-left: 8px;
+}
+
+.searchInput {
+  padding: 10px;
+  width: 25%;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.fileList {
+  margin-top: 20px;
+}
+
+.fileFormatSection {
+  background-color: #e1e2e4;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.fileFormatSection h3 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: #0070f3;
+}
+
+.fileListSection {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.fileItem {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.fileIconContainer {
+  font-size: 1.5rem;
+  color: #0070f3;
+  margin-right: 10px;
+}
+
+.fileDetails {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fileName {
+  font-weight: bold;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  cursor: pointer;
+}
+
+.fileSize {
+  font-size: 14px;
+  color: #217408;
+}
+
+.fileActions {
+  display: flex;
+  align-items: center;
+}
+
+.actionButton {
+  background: none;
+  border: none;
+  color: #0070f3;
+  margin-left: 10px;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.actionButton:hover {
+  color: #005bb5;
+}
+
+.uploadContainer {
+  margin-top: 30px;
+}
+
+.noFilesMessage {
+  text-align: center;
+  color: #666;
+}
+
+.footer {
+  background-color: #3f51b5;
+  margin-top: 50px;
+  text-align: center;
+  color: #ffffff;
+}
+
+/* Add the following styles to your existing Dashboard.module.css */
+
+/* Layout Switch Container */
+.filePreview {
+  width: 100%;
+  height: auto;
+  max-width: 120px; /* Ensure the preview image fits well */
+  border-radius: 4px;
+  margin-bottom: 10px;
+  object-fit: cover; /* Maintain aspect ratio */
+}
+
+/* Grid Layout Styles */
+.gridLayout .fileListSection {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.gridItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease-in-out;
+}
+
+.gridItem:hover {
+  transform: translateY(-5px);
+}
+
+.gridItem .fileIconContainer {
+  font-size: 3rem;
+  margin-bottom: 10px;
+}
+
+.gridItem .filePreview {
+  max-width: 100%;
+  height: auto;
+}
+
+.gridItem .fileName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.gridItem .fileDetails {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Layout Switch Container */
+.layoutSwitchContainer {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 15px;
+}
+
+.layoutButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #0070f3;
+  margin-left: 10px;
+}
+
+.layoutButton:hover {
+  color: #005bb5;
+}
+
+.pdfContainer {
+  width: 100%;
+  height: 100px;
+  overflow: auto;
+}
+
+.excelContainer {
+  width: 100%;
+  height: 100px;
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 8px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+.csvPreview {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.pdfPreview {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Idle Warning Modal */
+.idleModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.idleModalContent {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.idleModalContent h2 {
+  margin-bottom: 15px;
+  font-size: 24px;
+  color: #333;
+}
+
+.idleModalContent p {
+  margin-bottom: 20px;
+  font-size: 16px;
+  color: #555;
+}
+
+.stayConnectedButton {
+  background-color: #0070f3;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.stayConnectedButton:hover {
+  background-color: #005bb5;
+}

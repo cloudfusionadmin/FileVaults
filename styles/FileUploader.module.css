@@ -1,0 +1,30 @@
+.uploaderContainer {
+  border: 2px dashed #0070f3;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: #f7f9fc;
+  text-align: center;
+}
+
+.uppy-Dashboard-inner {
+  background-color: #fff !important;
+  border-radius: 8px !important;
+}
+
+.uppy-Dashboard-AddFiles {
+  background-color: #0070f3 !important;
+  color: white !important;
+}
+
+.uppy-Dashboard-Item-progress {
+  background-color: #d9e6f2 !important;
+}
+
+.uppy-Dashboard-progressBar {
+  background-color: #0070f3 !important;
+}
+
+.uppy-StatusBar-actions {
+  display: flex;
+  justify-content: space-between;
+}

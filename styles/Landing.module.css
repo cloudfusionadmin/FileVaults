@@ -1,0 +1,222 @@
+.container {
+    font-family: 'Arial', sans-serif;
+    color: #333;
+    background-color: #f0f2f5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .header {
+    background-color: #3f51b5;
+    padding: 20px;
+  }
+  
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .logo {
+    color: #fff;
+    font-size: 24px;
+  }
+  
+  .navLinks {
+    list-style: none;
+    display: flex;
+    gap: 15px;
+  }
+  
+  .navLinks a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 18px;
+  }
+  
+  .main {
+    flex-grow: 1;
+  }
+  
+  .hero {
+    background: linear-gradient(to right, #3f51b5, #005bb5);
+    color: #fff;
+    padding: 100px 20px;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+  
+  .heroContent {
+    max-width: 800px;
+  }
+  
+  .heroTitle {
+    font-size: 48px;
+    margin-bottom: 20px;
+  }
+  
+  .heroSubtitle {
+    font-size: 24px;
+    margin-bottom: 30px;
+  }
+  
+  .ctaButton {
+    background-color: #fff;
+    color: #0070f3;
+    padding: 15px 30px;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+  
+  .ctaButton:hover {
+    background-color: #eaeaea;
+  }
+  
+  .features {
+    background-color: #fff;
+    padding: 50px 20px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    margin-top: -50px;
+  }
+  
+  .sectionTitle {
+    font-size: 32px;
+    margin-bottom: 30px;
+    text-align: center;
+    color: #333;
+  }
+  
+  .featureList {
+    display: flex;
+    justify-content: space-around;
+    gap: 20px;
+  }
+  
+  .feature {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+    width: 30%;
+    text-align: center;
+  }
+  
+  .featureIcon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 10px;
+  }
+  
+  .feature h4 {
+    font-size: 22px;
+    margin-bottom: 10px;
+    color: #0070f3;
+  }
+  
+  .feature p {
+    font-size: 16px;
+    color: #666;
+  }
+  
+  .authSection {
+    margin-top: 50px;
+    text-align: center;
+  }
+  
+  .authDescription {
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+  
+  .authButtons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+  }
+  
+  .authButton {
+    background-color: #0070f3;
+    color: #fff;
+    padding: 15px 30px;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    min-width: 150px;
+  }
+  
+  .authButton:hover {
+    background-color: #005bb5;
+  }
+  
+  .footer {
+    background-color: #3f51b5;
+    color: #fff;
+    text-align: center;
+    padding: 20px 0;
+    margin-top: 20px;
+  }
+  
+  .footerLinks {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 10px;
+  }
+  
+  .footerLinks a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 18px;
+  }
+  
+  .accountWidget {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+  
+  .accountWidget h2 {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+  }
+  
+  .accountWidget p {
+    margin-bottom: 16px;
+  }
+  
+  .accountButtons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+  
+  .dashboardButton,
+  .settingsButton {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .dashboardButton:hover,
+  .settingsButton:hover {
+    background-color: #0056b3;
+  }
+  
+  
+  
+  
