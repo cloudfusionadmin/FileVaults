@@ -56,7 +56,6 @@ function RegisterForm() {
         confirmParams: {
           return_url: `${window.location.origin}/login`,
         },
-        clientSecret,
       });
 
       if (stripeError) {
