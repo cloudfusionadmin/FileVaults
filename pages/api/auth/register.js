@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { username, email, password, plan, paymentMethodId } = req.body;
+    const { username, email, password, plan } = req.body;
 
     try {
       let user = await User.findOne({ where: { email } });
@@ -31,24 +31,23 @@ export default async function handler(req, res) {
       const customer = await stripe.customers.create({
         email,
         name: username,
-        payment_method: paymentMethodId, // Attach the payment method to the customer
-        invoice_settings: {
-          default_payment_method: paymentMethodId,
-        },
       });
 
       // Get the price ID based on the selected plan
       const priceId = getPriceId(plan);
 
-      // Create a subscription for the customer
-      const subscription = await stripe.subscriptions.create({
+      // Create a PaymentIntent for the subscription
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: calculateAmount(plan), // Call a helper function to calculate the amount based on the plan
+        currency: 'usd',
         customer: customer.id,
-        items: [{ price: priceId }],
-        expand: ['latest_invoice.payment_intent'],
-        payment_behavior: 'default_incomplete', // Ensure that the payment intent is confirmed
+        automatic_payment_methods: { enabled: true },
       });
 
+      // Hash the user's password
       const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create a new user in the database
       user = await User.create({
         username,
         email,
@@ -57,19 +56,21 @@ export default async function handler(req, res) {
         plan, // Save the selected plan
       });
 
+      // Create a JWT token
       const payload = {
         user: {
           id: user.id,
         },
       };
 
+      // Sign and return the JWT token and the clientSecret for Stripe PaymentIntent
       jwt.sign(
         payload,
         process.env.JWT_SECRET_KEY,
         { expiresIn: '1h' },
         (err, token) => {
           if (err) throw err;
-          res.status(200).json({ token, subscriptionId: subscription.id });
+          res.status(200).json({ token, clientSecret: paymentIntent.client_secret });
         }
       );
     } catch (err) {
@@ -91,5 +92,18 @@ function getPriceId(plan) {
     case 'basic':
     default:
       return process.env.STRIPE_BASIC_PRICE_ID;
+  }
+}
+
+// Helper function to calculate the amount based on the plan
+function calculateAmount(plan) {
+  switch (plan) {
+    case 'standard':
+      return 2000; // Example amount in cents
+    case 'premium':
+      return 3000; // Example amount in cents
+    case 'basic':
+    default:
+      return 1000; // Example amount in cents
   }
 }
