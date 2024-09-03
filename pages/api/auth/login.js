@@ -5,11 +5,13 @@ import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 
 export default async function handler(req, res) {
-  console.log('Request method:', req.method); // Log the request method
-
+  // Ensure the request method is POST, otherwise return 405
   if (req.method !== 'POST') {
-    return res.status(405).json({ msg: 'Method not allowed' });
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
+
+  console.log('Request method:', req.method); // Log the request method
 
   await sequelize.sync(); // Ensure the database is synced
 
