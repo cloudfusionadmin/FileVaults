@@ -1,8 +1,0 @@
-{
-    "functions": {
-      "api/auth/login.js": {
-        "externalPackages": ["pg"]
-      }
-    }
-  }
-  
