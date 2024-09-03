@@ -3,7 +3,8 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "start": "next start"
+    "start": "next start",
+    "postinstall": "npm install pg"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.637.0",
