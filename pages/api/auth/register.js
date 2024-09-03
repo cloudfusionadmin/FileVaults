@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { username, email, password, plan } = req.body;
+    const { username, email, password, plan, paymentMethodId } = req.body;
 
     try {
       let user = await User.findOne({ where: { email } });
@@ -31,18 +31,25 @@ export default async function handler(req, res) {
       const customer = await stripe.customers.create({
         email,
         name: username,
+        payment_method: paymentMethodId, // Attach the payment method to the customer
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
       });
 
       // Get the price ID based on the selected plan
       const priceId = getPriceId(plan);
 
-      // Create a PaymentIntent
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: calculateAmountBasedOnPlan(plan), // Replace with actual amount calculation
-        currency: 'usd',
-        customer: customer.id,
-        automatic_payment_methods: { enabled: true },
-      });
+      // Create a subscription for the customer
+const subscription = await stripe.subscriptions.create({
+  customer: customer.id,
+  items: [{ price: priceId }],
+  payment_behavior: 'default_incomplete', // Wait for payment confirmation
+  expand: ['latest_invoice.payment_intent'],
+});
+
+// Return the client secret to the frontend
+res.status(200).json({ clientSecret: subscription.latest_invoice.payment_intent.client_secret });
 
       const hashedPassword = await bcrypt.hash(password, 10);
       user = await User.create({
@@ -65,7 +72,7 @@ export default async function handler(req, res) {
         { expiresIn: '1h' },
         (err, token) => {
           if (err) throw err;
-          res.status(200).json({ token, clientSecret: paymentIntent.client_secret });
+          res.status(200).json({ token, subscriptionId: subscription.id });
         }
       );
     } catch (err) {
@@ -87,18 +94,5 @@ function getPriceId(plan) {
     case 'basic':
     default:
       return process.env.STRIPE_BASIC_PRICE_ID;
-  }
-}
-
-// Helper function to calculate amount based on plan
-function calculateAmountBasedOnPlan(plan) {
-  switch (plan) {
-    case 'standard':
-      return 1000; // example amount in cents
-    case 'premium':
-      return 2000; // example amount in cents
-    case 'basic':
-    default:
-      return 500; // example amount in cents
   }
 }
