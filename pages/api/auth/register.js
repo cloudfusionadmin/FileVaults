@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { username, email, password, plan } = req.body;
+    const { username, email, password, plan, paymentMethodId } = req.body;
 
     try {
       let user = await User.findOne({ where: { email } });
@@ -31,17 +31,21 @@ export default async function handler(req, res) {
       const customer = await stripe.customers.create({
         email,
         name: username,
+        payment_method: paymentMethodId, // Attach the payment method to the customer
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
       });
 
       // Get the price ID based on the selected plan
       const priceId = getPriceId(plan);
 
       // Create a subscription for the customer
-      await stripe.subscriptions.create({
+      const subscription = await stripe.subscriptions.create({
         customer: customer.id,
         items: [{ price: priceId }],
-        default_payment_method: paymentMethodId,
         expand: ['latest_invoice.payment_intent'],
+        payment_behavior: 'default_incomplete', // Ensure that the payment intent is confirmed
       });
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -65,7 +69,7 @@ export default async function handler(req, res) {
         { expiresIn: '1h' },
         (err, token) => {
           if (err) throw err;
-          res.status(200).json({ token });
+          res.status(200).json({ token, subscriptionId: subscription.id });
         }
       );
     } catch (err) {
