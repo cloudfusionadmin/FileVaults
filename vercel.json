@@ -1,6 +1,6 @@
 {
     "functions": {
-      "api/**/*.js": {
+      "api/auth/login.js": {
         "externalPackages": ["pg"]
       }
     }
