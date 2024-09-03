@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
+import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import styles from '../styles/Auth.module.css';
@@ -33,37 +33,37 @@ function RegisterForm() {
     event.preventDefault();
 
     try {
-      const cardElement = elements.getElement(CardElement);
-
-      // Create a payment method using Stripe
-      const { paymentMethod, error: paymentMethodError } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardElement,
-        billing_details: {
-          email,
-        },
-      });
-
-      if (paymentMethodError) {
-        setError(paymentMethodError.message);
-        return;
-      }
-
-      // Call the backend API to register the user and create a subscription
+      // Create a PaymentIntent on the backend before handling the payment
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, email, password, plan, paymentMethodId: paymentMethod.id }),
+        body: JSON.stringify({ username, email, password, plan }),
       });
 
-      if (response.ok) {
-        router.push('/login'); // Redirect to login after successful registration
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
         setError(errorData.msg || 'Registration failed');
+        return;
       }
+
+      const { clientSecret } = await response.json();
+
+      // Confirm the payment using Stripe Link
+      const { error: stripeError } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/login`,
+        },
+      });
+
+      if (stripeError) {
+        setError(stripeError.message);
+        return;
+      }
+
+      router.push('/login'); // Redirect to login after successful registration
     } catch (err) {
       setError('An error occurred during registration.');
     }
@@ -109,8 +109,8 @@ function RegisterForm() {
               <option value="standard">Standard Plan</option>
               <option value="premium">Premium Plan</option>
             </select>
-            {/* Add Stripe CardElement for payment information */}
-            <CardElement className={styles.input} />
+            {/* Add Stripe PaymentElement for Stripe Link */}
+            <PaymentElement className={styles.input} />
             {error && <p className={styles.error}>{error}</p>}
             <button type="submit" className={styles.button}>Sign Up</button>
           </form>
