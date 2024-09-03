@@ -41,15 +41,12 @@ export default async function handler(req, res) {
       const priceId = getPriceId(plan);
 
       // Create a subscription for the customer
-const subscription = await stripe.subscriptions.create({
-  customer: customer.id,
-  items: [{ price: priceId }],
-  payment_behavior: 'default_incomplete', // Wait for payment confirmation
-  expand: ['latest_invoice.payment_intent'],
-});
-
-// Return the client secret to the frontend
-res.status(200).json({ clientSecret: subscription.latest_invoice.payment_intent.client_secret });
+      const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [{ price: priceId }],
+        expand: ['latest_invoice.payment_intent'],
+        payment_behavior: 'default_incomplete', // Ensure that the payment intent is confirmed
+      });
 
       const hashedPassword = await bcrypt.hash(password, 10);
       user = await User.create({
