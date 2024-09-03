@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       await stripe.subscriptions.create({
         customer: customer.id,
         items: [{ price: priceId }],
-        default_payment_method: 'card',
+        default_payment_method: 'Link',
         expand: ['latest_invoice.payment_intent'],
       });
 
