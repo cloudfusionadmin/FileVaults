@@ -9,7 +9,7 @@ import styles from '../styles/Auth.module.css';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
-function RegisterForm({ clientSecret, setClientSecret, setCustomerId }) {
+function RegisterForm({ clientSecret, customerId }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,26 +35,7 @@ function RegisterForm({ clientSecret, setClientSecret, setCustomerId }) {
     }
 
     try {
-      // Step 1: Fetch clientSecret from backend
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, email, password, plan }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.msg || 'Failed to start registration.');
-        return;
-      }
-
-      const { clientSecret, customerId } = await response.json();
-      setClientSecret(clientSecret);
-      setCustomerId(customerId);
-
-      // Step 2: Confirm the payment using Stripe
+      // Confirm the payment using Stripe
       const { error: stripeError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -67,7 +48,7 @@ function RegisterForm({ clientSecret, setClientSecret, setCustomerId }) {
         return;
       }
 
-      // Step 3: Complete registration with the backend after successful payment
+      // Complete registration with the backend after successful payment
       const userResponse = await fetch('/api/auth/register-success', {
         method: 'POST',
         headers: {
@@ -127,8 +108,7 @@ function RegisterForm({ clientSecret, setClientSecret, setCustomerId }) {
               <option value="standard">Standard Plan</option>
               <option value="premium">Premium Plan</option>
             </select>
-
-            {clientSecret && <PaymentElement className={styles.input} />}
+            <PaymentElement className={styles.input} />
             {error && <p className={styles.error}>{error}</p>}
             <button type="submit" className={styles.button}>Sign Up</button>
           </form>
@@ -145,9 +125,37 @@ export default function RegisterPage() {
   const [clientSecret, setClientSecret] = useState(null);
   const [customerId, setCustomerId] = useState(null);
 
+  useEffect(() => {
+    const fetchClientSecret = async () => {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: '', // You might need to change how username and other fields are passed
+          email: '',
+          password: '',
+          plan: 'basic',
+        }),
+      });
+
+      const { clientSecret, customerId } = await response.json();
+      setClientSecret(clientSecret);
+      setCustomerId(customerId);
+    };
+
+    fetchClientSecret();
+  }, []);
+
   return (
-    <Elements stripe={stripePromise} options={clientSecret ? { clientSecret } : undefined}>
-      <RegisterForm clientSecret={clientSecret} setClientSecret={setClientSecret} setCustomerId={setCustomerId} />
-    </Elements>
+    clientSecret ? (
+      <Elements stripe={stripePromise} options={{ clientSecret }}>
+        <RegisterForm clientSecret={clientSecret} customerId={customerId} />
+      </Elements>
+    ) : (
+      <div>Loading...</div>
+    )
   );
 }
+
