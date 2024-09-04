@@ -153,9 +153,25 @@ export default function RegisterPage() {
   const [clientSecret, setClientSecret] = useState(null);
   const [customerId, setCustomerId] = useState(null);
 
+  useEffect(() => {
+    // Fetch the clientSecret when the component mounts
+    const fetchClientSecret = async () => {
+      const response = await fetch('/api/auth/register-intent');
+      const data = await response.json();
+      setClientSecret(data.clientSecret);
+    };
+
+    fetchClientSecret();
+  }, []);
+
   return (
-    <Elements stripe={stripePromise} options={clientSecret ? { clientSecret } : undefined}>
-      <RegisterForm clientSecret={clientSecret} setClientSecret={setClientSecret} setCustomerId={setCustomerId} />
-    </Elements>
+    <>
+      {clientSecret && (
+        <Elements stripe={stripePromise} options={{ clientSecret }}>
+          <RegisterForm clientSecret={clientSecret} setClientSecret={setClientSecret} setCustomerId={setCustomerId} />
+        </Elements>
+      )}
+      {!clientSecret && <p>Loading...</p>}
+    </>
   );
 }
