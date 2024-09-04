@@ -43,6 +43,13 @@ export default async function handler(req, res) {
         expand: ['latest_invoice.payment_intent'],
       });
 
+      // Ensure that the subscription is properly created and contains a clientSecret
+      const clientSecret = subscription?.latest_invoice?.payment_intent?.client_secret;
+
+      if (!clientSecret) {
+        throw new Error('Failed to retrieve client secret from Stripe.');
+      }
+
       // Hash the user's password
       const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -56,12 +63,11 @@ export default async function handler(req, res) {
       });
 
       // Send success response along with clientSecret for frontend confirmation
-      const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
       res.status(200).json({ clientSecret, customerId: customer.id });
 
     } catch (err) {
-      console.error(err.message);
-      res.status(500).json({ error: 'Server error' });
+      console.error('Stripe Subscription Error:', err.message);
+      res.status(500).json({ error: 'Server error: ' + err.message });
     }
   } else {
     res.status(405).json({ msg: 'Method not allowed' });
