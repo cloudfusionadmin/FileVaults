@@ -13,7 +13,7 @@ function RegisterForm({ clientSecret, customerId }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [plan, setPlan] = useState('basic'); // Default plan selection
+  const [plan, setPlan] = useState('basic');
   const [error, setError] = useState('');
   const router = useRouter();
   const stripe = useStripe();
@@ -29,8 +29,13 @@ function RegisterForm({ clientSecret, customerId }) {
   const handleRegister = async (event) => {
     event.preventDefault();
 
+    if (!stripe || !elements) {
+      setError('Stripe has not loaded yet.');
+      return;
+    }
+
     try {
-      // Step 2: Confirm the payment using Stripe
+      // Confirm the payment using Stripe
       const { error: stripeError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -43,7 +48,7 @@ function RegisterForm({ clientSecret, customerId }) {
         return;
       }
 
-      // Step 3: Complete registration with backend after successful payment
+      // Complete registration with the backend after successful payment
       const userResponse = await fetch('/api/auth/register-success', {
         method: 'POST',
         headers: {
@@ -58,9 +63,7 @@ function RegisterForm({ clientSecret, customerId }) {
         return;
       }
 
-      // Redirect to login after successful registration
       router.push('/login');
-
     } catch (err) {
       setError('An error occurred during registration.');
     }
@@ -117,3 +120,42 @@ function RegisterForm({ clientSecret, customerId }) {
     </div>
   );
 }
+
+export default function RegisterPage() {
+  const [clientSecret, setClientSecret] = useState(null);
+  const [customerId, setCustomerId] = useState(null);
+
+  useEffect(() => {
+    const fetchClientSecret = async () => {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: '', // You might need to change how username and other fields are passed
+          email: '',
+          password: '',
+          plan: 'basic',
+        }),
+      });
+
+      const { clientSecret, customerId } = await response.json();
+      setClientSecret(clientSecret);
+      setCustomerId(customerId);
+    };
+
+    fetchClientSecret();
+  }, []);
+
+  return (
+    clientSecret ? (
+      <Elements stripe={stripePromise} options={{ clientSecret }}>
+        <RegisterForm clientSecret={clientSecret} customerId={customerId} />
+      </Elements>
+    ) : (
+      <div>Loading...</div>
+    )
+  );
+}
+
