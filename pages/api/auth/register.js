@@ -1,7 +1,7 @@
 import { sequelize } from '../../../config/database';
 import User from '../../../models/User';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+// import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
 import Stripe from 'stripe';
 
