@@ -27,16 +27,14 @@ export default async function handler(req, res) {
         name: username,
       });
 
-      // Get the price ID and amount based on the selected plan
+      // Get the price ID based on the selected plan
       const priceId = getPriceId(plan);
-      const amount = getPriceAmount(plan);
 
-      // Create a PaymentIntent for the subscription
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount,
-        currency: 'aud',
+      // Create a subscription for the customer
+      const subscription = await stripe.subscriptions.create({
         customer: customer.id,
-        setup_future_usage: 'off_session',
+        items: [{ price: priceId }],
+        expand: ['latest_invoice.payment_intent'],
       });
 
       // Hash the password before saving to the database
@@ -52,8 +50,9 @@ export default async function handler(req, res) {
         stripeCustomerId: customer.id,  // Save the Stripe customer ID
       });
 
-      // Send success response
-      res.status(200).json({ msg: 'User registered and payment successful', clientSecret: paymentIntent.client_secret });
+      // Send success response along with the clientSecret for payment confirmation
+      const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
+      res.status(200).json({ msg: 'User registered successfully', clientSecret });
 
     } catch (err) {
       console.error(err.message);
@@ -74,18 +73,5 @@ function getPriceId(plan) {
     case 'basic':
     default:
       return process.env.STRIPE_BASIC_PRICE_ID;
-  }
-}
-
-// Helper function to get the amount based on the plan (in cents)
-function getPriceAmount(plan) {
-  switch (plan) {
-    case 'standard':
-      return 1000; // in cents
-    case 'premium':
-      return 2000; // in cents
-    case 'basic':
-    default:
-      return 500;  // in cents
   }
 }

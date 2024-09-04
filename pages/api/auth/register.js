@@ -1,7 +1,6 @@
 import { sequelize } from '../../../config/database';
 import User from '../../../models/User';
 import bcrypt from 'bcryptjs';
-// import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
 import Stripe from 'stripe';
 
@@ -34,21 +33,30 @@ export default async function handler(req, res) {
         name: username,
       });
 
-      // Get the price ID and amount based on the selected plan
+      // Get the price ID based on the selected plan
       const priceId = getPriceId(plan);
-      const amount = getPriceAmount(plan);
 
-      // Create a PaymentIntent for the subscription
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount, // The amount is derived from the plan
-        currency: 'aud', // Adjust according to your currency
+      // Create a subscription for the customer
+      const subscription = await stripe.subscriptions.create({
         customer: customer.id,
-        setup_future_usage: 'off_session', // Enable future payments
+        items: [{ price: priceId }],
+        expand: ['latest_invoice.payment_intent'],
       });
 
-      const clientSecret = paymentIntent.client_secret;
+      // Hash the user's password
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Send the clientSecret and customerId to the frontend for payment confirmation
+      // Save the user in the database
+      const user = await User.create({
+        username,
+        email,
+        password: hashedPassword,
+        stripeCustomerId: customer.id, // Save the Stripe customer ID
+        plan, // Save the selected plan
+      });
+
+      // Send success response along with clientSecret for frontend confirmation
+      const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
       res.status(200).json({ clientSecret, customerId: customer.id });
 
     } catch (err) {
@@ -70,18 +78,5 @@ function getPriceId(plan) {
     case 'basic':
     default:
       return process.env.STRIPE_BASIC_PRICE_ID;
-  }
-}
-
-// Helper function to get the amount based on the plan (in cents)
-function getPriceAmount(plan) {
-  switch (plan) {
-    case 'standard':
-      return 1000; // Replace with the actual amount in cents for the standard plan
-    case 'premium':
-      return 2000; // Replace with the actual amount in cents for the premium plan
-    case 'basic':
-    default:
-      return 500; // Replace with the actual amount in cents for the basic plan
   }
 }
