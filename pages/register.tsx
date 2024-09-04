@@ -15,6 +15,7 @@ function RegisterForm({ clientSecret, setClientSecret, setCustomerId }) {
   const [password, setPassword] = useState('');
   const [plan, setPlan] = useState('basic');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const stripe = useStripe();
   const elements = useElements();
@@ -35,6 +36,8 @@ function RegisterForm({ clientSecret, setClientSecret, setCustomerId }) {
     }
 
     try {
+      setLoading(true);
+
       // Step 1: Fetch clientSecret from backend
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -47,6 +50,7 @@ function RegisterForm({ clientSecret, setClientSecret, setCustomerId }) {
       if (!response.ok) {
         const errorData = await response.json();
         setError(errorData.msg || 'Failed to start registration.');
+        setLoading(false);
         return;
       }
 
@@ -64,6 +68,7 @@ function RegisterForm({ clientSecret, setClientSecret, setCustomerId }) {
 
       if (stripeError) {
         setError(stripeError.message);
+        setLoading(false);
         return;
       }
 
@@ -79,12 +84,14 @@ function RegisterForm({ clientSecret, setClientSecret, setCustomerId }) {
       if (!userResponse.ok) {
         const userError = await userResponse.json();
         setError(userError.msg || 'Failed to complete registration.');
+        setLoading(false);
         return;
       }
 
       router.push('/login');
     } catch (err) {
       setError('An error occurred during registration.');
+      setLoading(false);
     }
   };
 
@@ -128,9 +135,10 @@ function RegisterForm({ clientSecret, setClientSecret, setCustomerId }) {
               <option value="premium">Premium Plan</option>
             </select>
 
+            {loading && <p>Loading payment information...</p>}
             {clientSecret && <PaymentElement className={styles.input} />}
             {error && <p className={styles.error}>{error}</p>}
-            <button type="submit" className={styles.button}>Sign Up</button>
+            <button type="submit" className={styles.button} disabled={loading}>Sign Up</button>
           </form>
           <p className={styles.text}>
             Already have an account? <Link href="/login">Login</Link>
