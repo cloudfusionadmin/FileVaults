@@ -9,7 +9,7 @@ import styles from '../styles/Auth.module.css';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
-function RegisterForm({ clientSecret, customerId }) {
+function RegisterForm(): JSX.Element {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,6 +35,17 @@ function RegisterForm({ clientSecret, customerId }) {
     }
 
     try {
+      // Fetch client secret and customer ID only when the user submits the form
+      const paymentResponse = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, email, password, plan }),
+      });
+
+      const { clientSecret, customerId } = await paymentResponse.json();
+
       // Confirm the payment using Stripe
       const { error: stripeError } = await stripe.confirmPayment({
         elements,
@@ -122,40 +133,9 @@ function RegisterForm({ clientSecret, customerId }) {
 }
 
 export default function RegisterPage() {
-  const [clientSecret, setClientSecret] = useState(null);
-  const [customerId, setCustomerId] = useState(null);
-
-  useEffect(() => {
-    const fetchClientSecret = async () => {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: '', // You might need to change how username and other fields are passed
-          email: '',
-          password: '',
-          plan: 'basic',
-        }),
-      });
-
-      const { clientSecret, customerId } = await response.json();
-      setClientSecret(clientSecret);
-      setCustomerId(customerId);
-    };
-
-    fetchClientSecret();
-  }, []);
-
   return (
-    clientSecret ? (
-      <Elements stripe={stripePromise} options={{ clientSecret }}>
-        <RegisterForm clientSecret={clientSecret} customerId={customerId} />
-      </Elements>
-    ) : (
-      <div>Loading...</div>
-    )
+    <Elements stripe={stripePromise}>
+      <RegisterForm />
+    </Elements>
   );
 }
-
