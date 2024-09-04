@@ -1,8 +1,6 @@
 import { sequelize } from '../../../config/database';
 import User from '../../../models/User';
 import bcrypt from 'bcryptjs';
-//import jwt from 'jsonwebtoken';
-import { validationResult } from 'express-validator';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -13,22 +11,17 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     await sequelize.sync();
 
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const { username, email, password, plan } = req.body;
 
     try {
       // Check if the user already exists
-      let existingUser = await User.findOne({ where: { email } });
+      const existingUser = await User.findOne({ where: { email } });
 
       if (existingUser) {
         return res.status(400).json({ msg: 'User already exists' });
       }
 
-      // Create Stripe customer
+      // Create a new Stripe customer
       const customer = await stripe.customers.create({
         email,
         name: username,
@@ -46,28 +39,7 @@ export default async function handler(req, res) {
         setup_future_usage: 'off_session',
       });
 
-      const clientSecret = paymentIntent.client_secret;
-
-      // Send the clientSecret and customerId to the frontend for payment confirmation
-      res.status(200).json({ clientSecret, customerId: customer.id });
-
-    } catch (err) {
-      console.error(err.message);
-      res.status(500).json({ error: 'Server error' });
-    }
-  } else {
-    res.status(405).json({ msg: 'Method not allowed' });
-  }
-}
-
-export const registerSuccessHandler = async (req, res) => {
-  if (req.method === 'POST') {
-    await sequelize.sync();
-
-    const { username, email, password, plan, customerId } = req.body;
-
-    try {
-      // Hash password
+      // Hash the password before saving to the database
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -77,10 +49,11 @@ export const registerSuccessHandler = async (req, res) => {
         email,
         password: hashedPassword,
         plan,
-        stripeCustomerId: customerId,
+        stripeCustomerId: customer.id,  // Save the Stripe customer ID
       });
 
-      res.status(200).json({ msg: 'User registered successfully' });
+      // Send success response
+      res.status(200).json({ msg: 'User registered and payment successful', clientSecret: paymentIntent.client_secret });
 
     } catch (err) {
       console.error(err.message);
@@ -89,7 +62,7 @@ export const registerSuccessHandler = async (req, res) => {
   } else {
     res.status(405).json({ msg: 'Method not allowed' });
   }
-};
+}
 
 // Helper function to get Stripe price ID based on the plan
 function getPriceId(plan) {
@@ -108,11 +81,11 @@ function getPriceId(plan) {
 function getPriceAmount(plan) {
   switch (plan) {
     case 'standard':
-      return 1000;
+      return 1000; // in cents
     case 'premium':
-      return 2000;
+      return 2000; // in cents
     case 'basic':
     default:
-      return 500;
+      return 500;  // in cents
   }
 }

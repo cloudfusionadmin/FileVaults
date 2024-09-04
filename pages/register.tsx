@@ -43,13 +43,12 @@ function RegisterForm({ clientSecret, customerId }) {
         },
       });
   
-      // Handle any error from Stripe
       if (stripeError) {
         setError(stripeError.message);
         return;
       }
   
-      // Complete registration with the backend after successful payment
+      // After successful payment, send user data to the backend
       const userResponse = await fetch('/api/auth/register-success', {
         method: 'POST',
         headers: {
@@ -60,7 +59,7 @@ function RegisterForm({ clientSecret, customerId }) {
           email, 
           password, 
           plan, 
-          customerId // This should be passed from where you originally get `customerId`
+          customerId,  // Pass the customerId returned from Stripe to the backend
         }),
       });
   
@@ -76,6 +75,7 @@ function RegisterForm({ clientSecret, customerId }) {
       setError('An error occurred during registration.');
     }
   };
+  
   
 
   return (
