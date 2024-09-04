@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
+import { useStripe, useElements, PaymentElement, Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import styles from '../styles/Auth.module.css';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
-function RegisterForm(): JSX.Element {
+function RegisterForm({ clientSecret, customerId }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,18 +34,6 @@ function RegisterForm(): JSX.Element {
     }
 
     try {
-      // Fetch client secret and customer ID only when the user submits the form
-      const paymentResponse = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, email, password, plan }),
-      });
-
-      const { clientSecret, customerId } = await paymentResponse.json();
-
-      // Confirm the payment using Stripe
       const { error: stripeError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -59,7 +46,7 @@ function RegisterForm(): JSX.Element {
         return;
       }
 
-      // Complete registration with the backend after successful payment
+      // Post to backend to create the user record after successful payment
       const userResponse = await fetch('/api/auth/register-success', {
         method: 'POST',
         headers: {
@@ -133,9 +120,36 @@ function RegisterForm(): JSX.Element {
 }
 
 export default function RegisterPage() {
+  const [clientSecret, setClientSecret] = useState('');
+  const [customerId, setCustomerId] = useState(''); // Initialize customerId state
+
+  useEffect(() => {
+    // Fetch the clientSecret and customerId when needed before rendering the form
+    const getClientSecretAndCustomerId = async () => {
+      const response = await fetch('/api/auth/prepare-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ plan: 'basic' }) // Adjust according to your needs
+      });
+      const data = await response.json();
+      setClientSecret(data.clientSecret);
+      setCustomerId(data.customerId); // Assuming your backend sends this
+    };
+
+    getClientSecretAndCustomerId();
+  }, []);
+
   return (
-    <Elements stripe={stripePromise}>
-      <RegisterForm />
-    </Elements>
+    <div>
+      {clientSecret && customerId ? (
+        <Elements stripe={stripePromise} options={{ clientSecret }}>
+          <RegisterForm clientSecret={clientSecret} customerId={customerId} />
+        </Elements>
+      ) : (
+        <p>Loading...</p>
+      )}
+    </div>
   );
 }
