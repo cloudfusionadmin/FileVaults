@@ -17,7 +17,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { username, email, password, plan } = req.body;
+    const { username, email, password, plan, paymentMethodId } = req.body;
 
     try {
       // Check if the user already exists
@@ -31,15 +31,20 @@ export default async function handler(req, res) {
       const customer = await stripe.customers.create({
         email,
         name: username,
+        payment_method: paymentMethodId, // Attach payment method to the customer
+        invoice_settings: {
+          default_payment_method: paymentMethodId, // Set the default payment method
+        },
       });
 
       // Get the price ID based on the selected plan
       const priceId = getPriceId(plan);
 
-      // Create a subscription for the customer
+      // Create a subscription for the customer with the payment method
       const subscription = await stripe.subscriptions.create({
         customer: customer.id,
         items: [{ price: priceId }],
+        default_payment_method: paymentMethodId, // Use the payment method for the subscription
         expand: ['latest_invoice.payment_intent'],
       });
 

@@ -35,6 +35,33 @@ function RegisterForm({ clientSecret, customerId }) {
     }
 
     try {
+      // Create payment method using PaymentElement
+      const { error: paymentError, paymentMethod } = await stripe.createPaymentMethod({
+        elements,
+      });
+
+      if (paymentError) {
+        setError(paymentError.message);
+        return;
+      }
+
+      // Send user data to the backend, including paymentMethod.id
+      const userResponse = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          username, 
+          email, 
+          password, 
+          plan, 
+          paymentMethodId: paymentMethod.id,  // Pass paymentMethodId to the backend
+        }),
+      });
+
+      const { clientSecret } = await userResponse.json();
+
       // Confirm the payment using Stripe
       const { error: stripeError } = await stripe.confirmPayment({
         elements,
@@ -45,27 +72,6 @@ function RegisterForm({ clientSecret, customerId }) {
 
       if (stripeError) {
         setError(stripeError.message);
-        return;
-      }
-
-      // After successful payment, send user data to the backend
-      const userResponse = await fetch('/api/auth/register-success', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          username, 
-          email, 
-          password, 
-          plan, 
-          customerId,  // Pass the customerId returned from Stripe to the backend
-        }),
-      });
-
-      if (!userResponse.ok) {
-        const userError = await userResponse.json();
-        setError(userError.msg || 'Failed to complete registration.');
         return;
       }
 
@@ -148,7 +154,6 @@ export default function RegisterPage() {
       });
 
       const data = await response.json();
-      console.log('Backend response:', data); // Log the backend response to inspect it
       setClientSecret(data.clientSecret);
       setCustomerId(data.customerId);
     };
