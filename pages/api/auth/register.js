@@ -2,7 +2,7 @@ import { sequelize } from '../../../config/database';
 import User from '../../../models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { check, validationResult } from 'express-validator';
+import { validationResult } from 'express-validator';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -18,12 +18,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { username, email, password, plan } = req.body; // Removed paymentMethodId since it's handled on frontend
+    const { username, email, password, plan } = req.body;
 
     try {
-      let user = await User.findOne({ where: { email } });
+      // Check if the user already exists
+      let existingUser = await User.findOne({ where: { email } });
 
-      if (user) {
+      if (existingUser) {
         return res.status(400).json({ msg: 'User already exists' });
       }
 
@@ -46,31 +47,9 @@ export default async function handler(req, res) {
 
       const clientSecret = paymentIntent.client_secret;
 
-      // Hash the user's password and save the user to the database
-      const hashedPassword = await bcrypt.hash(password, 10);
-      user = await User.create({
-        username,
-        email,
-        password: hashedPassword,
-        stripeCustomerId: customer.id, // Save the Stripe customer ID
-        plan, // Save the selected plan
-      });
+      // Send the clientSecret and customerId to the frontend for payment confirmation
+      res.status(200).json({ clientSecret, customerId: customer.id });
 
-      const payload = {
-        user: {
-          id: user.id,
-        },
-      };
-
-      jwt.sign(
-        payload,
-        process.env.JWT_SECRET_KEY,
-        { expiresIn: '1h' },
-        (err, token) => {
-          if (err) throw err;
-          res.status(200).json({ clientSecret, token }); // Send the clientSecret and token to the frontend
-        }
-      );
     } catch (err) {
       console.error(err.message);
       res.status(500).json({ error: 'Server error' });

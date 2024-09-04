@@ -44,6 +44,15 @@ const User = sequelize.define('User', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  // New fields for Stripe data
+  stripeCustomerId: {
+    type: DataTypes.STRING,  // Store the Stripe customer ID
+    allowNull: true,
+  },
+  plan: {
+    type: DataTypes.STRING,  // Store the selected plan
+    allowNull: true,
+  },
 }, {
   timestamps: true,
 });
