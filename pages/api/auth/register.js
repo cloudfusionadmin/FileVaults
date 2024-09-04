@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       // Create a PaymentIntent for the subscription
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount, // The amount is derived from the plan
-        currency: 'usd', // Adjust according to your currency
+        currency: 'aud', // Adjust according to your currency
         customer: customer.id,
         setup_future_usage: 'off_session', // Enable future payments
       });
