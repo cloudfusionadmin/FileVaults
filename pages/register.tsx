@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useStripe, useElements, PaymentElement, Elements } from '@stripe/react-stripe-js';
+import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import styles from '../styles/Auth.module.css';
 
@@ -27,45 +28,55 @@ function RegisterForm({ clientSecret, customerId }) {
 
   const handleRegister = async (event) => {
     event.preventDefault();
-
+  
     if (!stripe || !elements) {
       setError('Stripe has not loaded yet.');
       return;
     }
-
+  
     try {
+      // Confirm the payment using Stripe
       const { error: stripeError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/login`,
         },
       });
-
+  
+      // Handle any error from Stripe
       if (stripeError) {
         setError(stripeError.message);
         return;
       }
-
-      // Post to backend to create the user record after successful payment
+  
+      // Complete registration with the backend after successful payment
       const userResponse = await fetch('/api/auth/register-success', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, email, password, plan, customerId }),
+        body: JSON.stringify({ 
+          username, 
+          email, 
+          password, 
+          plan, 
+          customerId // This should be passed from where you originally get `customerId`
+        }),
       });
-
+  
       if (!userResponse.ok) {
         const userError = await userResponse.json();
         setError(userError.msg || 'Failed to complete registration.');
         return;
       }
-
+  
+      // Redirect to login page after successful registration
       router.push('/login');
     } catch (err) {
       setError('An error occurred during registration.');
     }
   };
+  
 
   return (
     <div className={styles.container}>
@@ -120,36 +131,39 @@ function RegisterForm({ clientSecret, customerId }) {
 }
 
 export default function RegisterPage() {
-  const [clientSecret, setClientSecret] = useState('');
-  const [customerId, setCustomerId] = useState(''); // Initialize customerId state
+  const [clientSecret, setClientSecret] = useState(null);
+  const [customerId, setCustomerId] = useState(null);
 
   useEffect(() => {
-    // Fetch the clientSecret and customerId when needed before rendering the form
-    const getClientSecretAndCustomerId = async () => {
+    const fetchClientSecret = async () => {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ plan: 'basic' }) // Adjust according to your needs
+        body: JSON.stringify({
+          username: '', // You might need to change how username and other fields are passed
+          email: '',
+          password: '',
+          plan: 'basic',
+        }),
       });
-      const data = await response.json();
-      setClientSecret(data.clientSecret);
-      setCustomerId(data.customerId); // Assuming your backend sends this
+
+      const { clientSecret, customerId } = await response.json();
+      setClientSecret(clientSecret);
+      setCustomerId(customerId);
     };
 
-    getClientSecretAndCustomerId();
+    fetchClientSecret();
   }, []);
 
   return (
-    <div>
-      {clientSecret && customerId ? (
-        <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <RegisterForm clientSecret={clientSecret} customerId={customerId} />
-        </Elements>
-      ) : (
-        <p>Loading...</p>
-      )}
-    </div>
+    clientSecret ? (
+      <Elements stripe={stripePromise} options={{ clientSecret }}>
+        <RegisterForm clientSecret={clientSecret} customerId={customerId} />
+      </Elements>
+    ) : (
+      <div>Loading...</div>
+    )
   );
 }
