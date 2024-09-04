@@ -126,7 +126,7 @@ export default function RegisterPage() {
   useEffect(() => {
     // Fetch the clientSecret and customerId when needed before rendering the form
     const getClientSecretAndCustomerId = async () => {
-      const response = await fetch('/api/auth/prepare-payment', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
