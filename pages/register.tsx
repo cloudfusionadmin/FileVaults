@@ -29,21 +29,38 @@ function RegisterForm({ clientSecret }) {
 
   const handleRegister = async (event) => {
     event.preventDefault();
-
+  
     try {
-      // Confirm the payment using Stripe
+      // Send registration info to backend and get clientSecret
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, email, password, plan }),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || 'Registration failed');
+        return;
+      }
+  
+      const { clientSecret } = await response.json();
+  
+      // Confirm the payment using Stripe with the PaymentElement
       const { error: stripeError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/login`,
         },
       });
-
+  
       if (stripeError) {
         setError(stripeError.message);
         return;
       }
-
+  
       router.push('/login'); // Redirect to login after successful registration
     } catch (err) {
       setError('An error occurred during registration.');

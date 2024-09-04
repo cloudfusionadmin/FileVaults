@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { username, email, password, plan, paymentMethodId } = req.body;
+    const { username, email, password, plan } = req.body; // Removed paymentMethodId since it's handled on frontend
 
     try {
       let user = await User.findOne({ where: { email } });
@@ -36,16 +36,17 @@ export default async function handler(req, res) {
       // Get the price ID based on the selected plan
       const priceId = getPriceId(plan);
 
-      // Create a subscription for the customer
-      const subscription = await stripe.subscriptions.create({
+      // Create a PaymentIntent for the subscription
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: 1000, // Replace with appropriate amount for the plan (in cents)
+        currency: 'usd', // Adjust according to your currency
         customer: customer.id,
-        items: [{ price: priceId }],
-        default_payment_method: paymentMethodId, // From frontend
-        expand: ['latest_invoice.payment_intent'],
+        setup_future_usage: 'off_session', // Enable future payments
       });
 
-      const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
+      const clientSecret = paymentIntent.client_secret;
 
+      // Hash the user's password and save the user to the database
       const hashedPassword = await bcrypt.hash(password, 10);
       user = await User.create({
         username,
@@ -72,7 +73,7 @@ export default async function handler(req, res) {
       );
     } catch (err) {
       console.error(err.message);
-      res.status(500).send('Server error');
+      res.status(500).json({ error: 'Server error' });
     }
   } else {
     res.status(405).json({ msg: 'Method not allowed' });
