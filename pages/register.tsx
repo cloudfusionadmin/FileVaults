@@ -138,9 +138,7 @@ function RegisterForm({ clientSecret, setClientSecret, setCustomerId }) {
             {loading && <p>Loading payment information...</p>}
             {clientSecret && <PaymentElement className={styles.input} />}
             {error && <p className={styles.error}>{error}</p>}
-            <button type="submit" className={styles.button} disabled={loading}>
-              {loading ? 'Processing...' : 'Sign Up'}
-            </button>
+            <button type="submit" className={styles.button} disabled={loading}>Sign Up</button>
           </form>
           <p className={styles.text}>
             Already have an account? <Link href="/login">Login</Link>
@@ -154,34 +152,10 @@ function RegisterForm({ clientSecret, setClientSecret, setCustomerId }) {
 export default function RegisterPage() {
   const [clientSecret, setClientSecret] = useState(null);
   const [customerId, setCustomerId] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Fetch the clientSecret when the component mounts
-    const fetchClientSecret = async () => {
-      try {
-        const response = await fetch('/api/auth/register-intent');
-        const data = await response.json();
-        setClientSecret(data.clientSecret);
-        setLoading(false);
-      } catch (error) {
-        setLoading(false);
-        console.error('Failed to fetch client secret:', error);
-      }
-    };
-
-    fetchClientSecret();
-  }, []);
 
   return (
-    <>
-      {loading && <p>Loading...</p>}
-      {!loading && clientSecret && (
-        <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <RegisterForm clientSecret={clientSecret} setClientSecret={setClientSecret} setCustomerId={setCustomerId} />
-        </Elements>
-      )}
-      {!loading && !clientSecret && <p>Failed to load payment information. Please try again later.</p>}
-    </>
+    <Elements stripe={stripePromise} options={clientSecret ? { clientSecret } : undefined}>
+      <RegisterForm clientSecret={clientSecret} setClientSecret={setClientSecret} setCustomerId={setCustomerId} />
+    </Elements>
   );
 }
