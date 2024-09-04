@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { username, email, password, plan } = req.body;
+    const { username, email, password, plan, paymentMethodId } = req.body;
 
     try {
       let user = await User.findOne({ where: { email } });
@@ -37,12 +37,14 @@ export default async function handler(req, res) {
       const priceId = getPriceId(plan);
 
       // Create a subscription for the customer
-      await stripe.subscriptions.create({
+      const subscription = await stripe.subscriptions.create({
         customer: customer.id,
         items: [{ price: priceId }],
-        default_payment_method: paymentMethodId,
+        default_payment_method: paymentMethodId, // From frontend
         expand: ['latest_invoice.payment_intent'],
       });
+
+      const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
 
       const hashedPassword = await bcrypt.hash(password, 10);
       user = await User.create({
@@ -65,7 +67,7 @@ export default async function handler(req, res) {
         { expiresIn: '1h' },
         (err, token) => {
           if (err) throw err;
-          res.status(200).json({ token });
+          res.status(200).json({ clientSecret, token }); // Send the clientSecret and token to the frontend
         }
       );
     } catch (err) {

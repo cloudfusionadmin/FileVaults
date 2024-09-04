@@ -1,5 +1,3 @@
-// pages/register.tsx
-
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -11,7 +9,7 @@ import styles from '../styles/Auth.module.css';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
-function RegisterForm() {
+function RegisterForm({ clientSecret }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,24 +31,7 @@ function RegisterForm() {
     event.preventDefault();
 
     try {
-      // Create a PaymentIntent on the backend before handling the payment
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, email, password, plan }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.msg || 'Registration failed');
-        return;
-      }
-
-      const { clientSecret } = await response.json();
-
-      // Confirm the payment using Stripe Link
+      // Confirm the payment using Stripe
       const { error: stripeError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -124,9 +105,38 @@ function RegisterForm() {
 }
 
 export default function RegisterPage() {
+  const [clientSecret, setClientSecret] = useState(null);
+
+  useEffect(() => {
+    // Fetch clientSecret from the backend
+    const fetchClientSecret = async () => {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: '',
+          email: '',
+          password: '',
+          plan: 'basic', // default plan, adjust as needed
+        }),
+      });
+
+      const { clientSecret } = await response.json();
+      setClientSecret(clientSecret);
+    };
+
+    fetchClientSecret();
+  }, []);
+
   return (
-    <Elements stripe={stripePromise}>
-      <RegisterForm />
-    </Elements>
+    clientSecret ? (
+      <Elements stripe={stripePromise} options={{ clientSecret }}>
+        <RegisterForm clientSecret={clientSecret} />
+      </Elements>
+    ) : (
+      <div>Loading...</div>
+    )
   );
 }
