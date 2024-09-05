@@ -11,7 +11,7 @@ export default function RegisterForm() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [plan, setPlan] = useState('basic');
+  const [plan, setPlan] = useState('basic'); // Plan is selected by the user
   const [error, setError] = useState('');
   const router = useRouter();
 
@@ -21,7 +21,7 @@ export default function RegisterForm() {
     try {
       const stripe = await stripePromise;
 
-      // Send registration data to the backend and create a checkout session
+      // Send registration data to the backend
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -31,7 +31,7 @@ export default function RegisterForm() {
           username,
           email,
           password,
-          plan,
+          plan, // Send the selected plan to the backend
         }),
       });
 

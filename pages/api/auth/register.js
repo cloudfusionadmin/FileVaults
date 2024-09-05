@@ -25,12 +25,13 @@ export default async function handler(req, res) {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
-      // Create the user in the database but don't save it yet
-      const user = User.build({
+      // Create the user in the database with the selected plan
+      const user = await User.create({
         username,
         email,
         password: hashedPassword,
-        plan,
+        plan, // Save the selected plan
+        maxStorage: getStorageLimit(plan), // Set the storage limit based on the plan
       });
 
       // Create Stripe Checkout session for subscription
@@ -48,13 +49,10 @@ export default async function handler(req, res) {
         cancel_url: `${process.env.DOMAIN}/cancel`,
       });
 
-      // Save the user temporarily
-      await user.save();
-
       // Send sessionId back to the frontend
       res.status(200).json({ sessionId: session.id });
     } catch (err) {
-      console.error('Stripe Checkout Error:', err.message);
+      console.error('Error:', err.message);
       res.status(500).json({ error: 'Server error: ' + err.message });
     }
   } else {
@@ -72,5 +70,18 @@ function getPriceId(plan) {
     case 'basic':
     default:
       return process.env.STRIPE_BASIC_PRICE_ID;
+  }
+}
+
+// Helper function to get the storage limit based on the plan
+function getStorageLimit(plan) {
+  switch (plan) {
+    case 'standard':
+      return 250 * 1024 * 1024 * 1024; // 250 GB
+    case 'premium':
+      return 1000 * 1024 * 1024 * 1024; // 1000 GB
+    case 'basic':
+    default:
+      return 100 * 1024 * 1024 * 1024; // 100 GB
   }
 }

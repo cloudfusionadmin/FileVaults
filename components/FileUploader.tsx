@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Uppy, { UppyFile, UploadResult } from "@uppy/core";
 import AwsS3 from "@uppy/aws-s3";
 import { Dashboard } from "@uppy/react";
@@ -17,11 +17,31 @@ interface FileUploaderProps {
 }
 
 export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
+  const [currentStorage, setCurrentStorage] = useState(0);
+  const [maxStorage, setMaxStorage] = useState(0);
+  const [error, setError] = useState('');
+
+  // Fetch storage info from the backend
+  useEffect(() => {
+    const fetchStorageInfo = async () => {
+      try {
+        const response = await fetch('/api/storage-info'); // Assume API route to get storage info
+        const data = await response.json();
+        setCurrentStorage(data.currentStorage);
+        setMaxStorage(data.maxStorage);
+      } catch (error) {
+        console.error('Error fetching storage info:', error);
+      }
+    };
+
+    fetchStorageInfo();
+  }, []);
+
   const uppy = React.useMemo(() => {
     const uppy = new Uppy({
       autoProceed: false, // Wait for user to click "Upload" before starting
       restrictions: {
-        maxFileSize: 1024 * 1024 * 2000, // 20MB
+        maxFileSize: Math.max(0, maxStorage - currentStorage), // Restrict file size to remaining storage
         allowedFileTypes: [
           "image/*",
           "application/pdf",
@@ -66,15 +86,27 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
       },
     });
 
+    // Listen for when files are added
+    uppy.on('file-added', (file) => {
+      const remainingStorage = maxStorage - currentStorage;
+      if (file.size > remainingStorage) {
+        setError('This file exceeds your available storage.');
+        uppy.removeFile(file.id); // Prevent the file from being uploaded
+      } else {
+        setError(''); // Clear the error if the file fits
+      }
+    });
+
     uppy.on("complete", (result) => {
       onUploadSuccess(result);
     });
 
     return uppy;
-  }, [onUploadSuccess, userId]);
+  }, [onUploadSuccess, userId, currentStorage, maxStorage]);
 
   return (
     <div className={styles.uploaderContainer}>
+      {error && <p style={{ color: 'red' }}>{error}</p>} {/* Display error if any */}
       <Dashboard
         uppy={uppy}
         proudlyDisplayPoweredByUppy={false} // Remove Uppy branding
