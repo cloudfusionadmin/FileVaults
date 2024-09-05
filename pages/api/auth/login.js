@@ -5,15 +5,12 @@ import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 
 export default async function handler(req, res) {
-  // Ensure the request method is POST, otherwise return 405
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
-  console.log('Request method:', req.method); // Log the request method
-
-  await sequelize.sync(); // Ensure the database is synced
+  await sequelize.sync(); // Ensure database sync
 
   const { email, password, twoFactorCode } = req.body;
 
@@ -25,17 +22,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
-    // Check if the password is correct
+    // Check if the password matches
     const isMatch = await bcrypt.compare(password, user.password);
-
     if (!isMatch) {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
-    // If 2FA is enabled, handle the 2FA logic
+    // Handle 2FA if enabled
     if (user.is2FAEnabled) {
       if (!twoFactorCode) {
-        // Generate a 2FA code and send it via email
+        // Generate and send a new 2FA code if not provided
         const twoFactorCodeGenerated = Math.floor(100000 + Math.random() * 900000).toString();
 
         const transporter = nodemailer.createTransport({
@@ -57,52 +53,36 @@ export default async function handler(req, res) {
 
         await transporter.sendMail(mailOptions);
 
-        // Save the hashed 2FA code and its expiry in the user's record
+        // Store the hashed 2FA code and its expiry
         const hashedCode = bcrypt.hashSync(twoFactorCodeGenerated, bcrypt.genSaltSync(10));
         user.temp2FACode = hashedCode;
-        user.temp2FACodeExpiry = new Date(Date.now() + 5 * 60000); // Set expiry time to 5 minutes
-
+        user.temp2FACodeExpiry = new Date(Date.now() + 5 * 60000); // 5 minutes expiry
         await user.save();
 
         return res.status(206).json({ msg: '2FA code sent to your email' });
       }
 
-      // Check if the 2FA code is expired
+      // Verify 2FA code
       if (new Date() > user.temp2FACodeExpiry) {
         return res.status(400).json({ msg: '2FA code expired' });
       }
 
-      // Verify the 2FA code
       const is2FACodeMatch = await bcrypt.compare(twoFactorCode, user.temp2FACode);
       if (!is2FACodeMatch) {
         return res.status(400).json({ msg: 'Invalid 2FA code' });
       }
 
-      // Clear the temporary 2FA code and expiry after successful verification
+      // Clear temp 2FA data after verification
       user.temp2FACode = null;
       user.temp2FACodeExpiry = null;
       await user.save();
     }
 
     // Create a JWT token
-    const payload = {
-      user: {
-        id: user.id,
-      },
-    };
+    const payload = { id: user.id };
+    const token = jwt.sign(payload, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
 
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET_KEY,
-      { expiresIn: '15m' }, // Adjust the token expiry as needed
-      (err, token) => {
-        if (err) {
-          console.error('JWT sign error:', err);
-          return res.status(500).json({ msg: 'Token generation failed' });
-        }
-        return res.status(200).json({ token, userId: user.id, username: user.username });
-      }
-    );
+    return res.status(200).json({ token, userId: user.id, username: user.username });
 
   } catch (err) {
     console.error('Server error:', err.message);
