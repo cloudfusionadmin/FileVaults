@@ -32,7 +32,7 @@ export default function Login() {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('username', data.username);
-        router.push('/'); // Redirect to dashboard
+        router.push('/dashboard'); // Redirect to dashboard
       } else {
         const errorData = await response.json();
         setError(errorData.msg || 'Login failed');
@@ -45,7 +45,7 @@ export default function Login() {
   return (
     <div className={styles.container}>
       <Head>
-        <title>Login - R2 Bucket Manager</title>
+        <title>Login - File Vaults Manager</title>
       </Head>
 
       <main className={styles.main}>

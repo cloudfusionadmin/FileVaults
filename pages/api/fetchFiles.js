@@ -1,6 +1,5 @@
-// pages/api/fetchFiles.js
-
 import AWS from 'aws-sdk';
+import User from './../../models/User'; // Import the User model
 
 export default async function handler(req, res) {
   try {
@@ -55,6 +54,9 @@ export default async function handler(req, res) {
       // Calculate total number of files and total size
       const totalFiles = data.Contents.length;
       const totalSizeMB = data.Contents.reduce((acc, item) => acc + item.Size, 0) / 1024 / 1024;
+
+      // Update the currentStorage field in the database
+      await User.update({ currentStorage: totalSizeMB }, { where: { id: userId } });
 
       res.status(200).json({
         filesByFormat,
