@@ -2,7 +2,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { FaFileImage, FaFilePdf, FaFileAlt, FaDownload, FaTrash, FaSignOutAlt, FaShareAlt, FaCog, FaSearch, FaList, FaThLarge } from 'react-icons/fa';
+import { FaFileImage, FaFilePdf, FaFileAlt, FaDownload, FaTrash, FaShareAlt, FaCog, FaSearch, FaList, FaThLarge } from 'react-icons/fa';
 import { useIdleTimer } from 'react-idle-timer';
 import { FileUploader } from '../components/FileUploader';
 import ConfirmModal from '../components/ConfirmModal';
@@ -47,10 +47,7 @@ export default function Dashboard() {
 
   // Idle timer logic
   const handleOnIdle = () => {
-    console.log('User is idle');
     setShowIdleModal(true); // Show the idle warning modal
-
-    // Set a timer to automatically log out the user after 1 minute if no interaction
     const timer = setTimeout(() => {
       handleLogout();
     }, 60000); // 1 minute
@@ -58,7 +55,6 @@ export default function Dashboard() {
   };
 
   const handleStayConnected = () => {
-    console.log('User clicked stay connected');
     setShowIdleModal(false); // Hide the idle warning modal
     if (logoutTimer) clearTimeout(logoutTimer); // Clear the logout timer
   };
@@ -70,20 +66,17 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      const storedUserId = localStorage.getItem('userId');
-      const storedUsername = localStorage.getItem('username');
-  
-      if (!token || !storedUserId || !storedUsername) {
-        router.push('/login'); // Redirect to login if not authenticated
-      } else {
-        setUserId(storedUserId);
-        setUsername(storedUsername);
-        refreshToken(); // Check token expiry and refresh if necessary
-        fetchFiles(storedUserId); // Fetch files if authenticated
-        fetchStorageInfo(); // Fetch storage info
-      }
+    const token = localStorage.getItem('token');
+    const storedUserId = localStorage.getItem('userId');
+    const storedUsername = localStorage.getItem('username');
+
+    if (!token || !storedUserId || !storedUsername) {
+      router.push('/login'); // Redirect to login if not authenticated
+    } else {
+      setUserId(storedUserId);
+      setUsername(storedUsername);
+      fetchFiles(storedUserId); // Fetch files if authenticated
+      fetchStorageInfo(); // Fetch storage info
     }
   }, []);
 
@@ -92,7 +85,7 @@ export default function Dashboard() {
     try {
       const response = await fetch('/api/storage-info', {
         headers: {
-          'x-auth-token': localStorage.getItem('token') || '',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Send JWT in the header
         },
       });
 
@@ -115,7 +108,7 @@ export default function Dashboard() {
     try {
       const response = await fetch(`/api/fetchFiles?userId=${userId}`, {
         headers: {
-          'x-auth-token': localStorage.getItem('token') || '',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
       if (response.ok) {
@@ -139,38 +132,6 @@ export default function Dashboard() {
     }
   };
 
-  // Added refreshToken function
-  const refreshToken = async () => {
-    try {
-      const token = localStorage.getItem('token');
-  
-      if (!token) {
-        console.error('No token found to refresh');
-        return null;
-      }
-  
-      const response = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // Send the token in the Authorization header
-        }
-      });
-  
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('token', data.token); // Save the new token
-        return data.token;
-      } else {
-        console.error('Failed to refresh token');
-        return null;
-      }
-    } catch (err) {
-      console.error('Error refreshing token:', err);
-      return null;
-    }
-  };
-
   const handleDownload = (fileUrl: string) => {
     window.open(fileUrl, '_blank');
   };
@@ -186,7 +147,7 @@ export default function Dashboard() {
         const response = await fetch(`/api/deleteFile?name=${encodeURIComponent(fileToDelete)}&userId=${userId}`, {
           method: 'DELETE',
           headers: {
-            'x-auth-token': localStorage.getItem('token') || '',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
           },
         });
         if (response.ok) {
@@ -208,7 +169,7 @@ export default function Dashboard() {
       const response = await fetch(`/api/shareFile?name=${encodeURIComponent(fileName)}&userId=${userId}`, {
         method: 'GET',
         headers: {
-          'x-auth-token': localStorage.getItem('token') || '',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
       if (response.ok) {
@@ -235,8 +196,8 @@ export default function Dashboard() {
       const response = await fetch('/api/auth/verify-2fa', {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
-          'x-auth-token': localStorage.getItem('token') || '',
         },
         body: JSON.stringify({ token: twoFactorToken, userId }),
       });
@@ -451,7 +412,6 @@ export default function Dashboard() {
                 <FileUploader
                   userId={userId}
                   onUploadSuccess={(result) => {
-                    console.log(JSON.stringify(result));
                     fetchFiles(userId); // Refresh the file list after a successful upload
                   }}
                 />

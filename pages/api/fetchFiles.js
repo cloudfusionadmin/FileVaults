@@ -1,4 +1,5 @@
 import AWS from 'aws-sdk';
+import jwt from 'jsonwebtoken'; // For verifying JWT
 import User from '../../models/User'; // Import the User model
 
 export default async function handler(req, res) {
@@ -6,6 +7,29 @@ export default async function handler(req, res) {
     const { method } = req;
 
     if (method === 'GET') {
+      // Get JWT token from the Authorization header
+      const authHeader = req.headers['authorization'];
+      const token = authHeader && authHeader.split(' ')[1]; // Extract token
+
+      if (!token) {
+        return res.status(401).json({ error: 'Unauthorized. Token missing.' });
+      }
+
+      let decoded;
+      try {
+        // Verify the JWT token using the secret key
+        decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+      } catch (err) {
+        return res.status(403).json({ error: 'Invalid token.' });
+      }
+
+      const { userId } = req.query;
+
+      // Check if the userId from the token matches the userId passed in the query
+      if (decoded.id !== userId) {
+        return res.status(403).json({ error: 'Unauthorized access to another user’s data.' });
+      }
+
       // Initialize the S3 client
       const s3 = new AWS.S3({
         endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -15,13 +39,12 @@ export default async function handler(req, res) {
         signatureVersion: 'v4',
       });
 
-      const { userId } = req.query;
       const bucketName = process.env.R2_BUCKET_NAME;
 
       // Fetch the files for the specific user by using the userId as the Prefix
-      const data = await s3.listObjectsV2({ 
+      const data = await s3.listObjectsV2({
         Bucket: bucketName,
-        Prefix: `${userId}/`,  // This ensures that only files under the user's directory are listed
+        Prefix: `${userId}/`, // This ensures that only files under the user's directory are listed
       }).promise();
 
       if (!data.Contents) {

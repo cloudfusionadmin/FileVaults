@@ -1,10 +1,10 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getSession } from 'next-auth/react'; // Updated for next-auth v4
+import jwt from 'jsonwebtoken'; // For JWT handling
 import User from '../../models/User'; // Import the User model
 
-const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME } = process.env;
+const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, JWT_SECRET_KEY } = process.env;
 
 const s3 = new S3Client({
   region: "auto",
@@ -17,25 +17,40 @@ const s3 = new S3Client({
 
 // Define handler function for upload
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession({ req });
-  if (!session) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Extract the JWT from the Authorization header
+
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized. Token missing.' });
+  }
+
+  let decoded;
+  try {
+    // Verify JWT token
+    decoded = jwt.verify(token, JWT_SECRET_KEY as string);
+  } catch (err) {
+    return res.status(403).json({ error: 'Invalid token.' });
   }
 
   const { filename, userId, fileHash, contentType } = JSON.parse(req.body);
   const fileSize = parseInt(req.headers['content-length'] || '0'); // Parse file size from headers
 
   try {
-    // Fetch the user from the database using their email
-    const user = await User.findOne({ where: { email: session.user?.email } });
+    // Fetch the user from the database using their id from the decoded token
+    const user = await User.findOne({ where: { id: decoded.id } });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Ensure the userId passed matches the user's id
+    if (user.id !== parseInt(userId)) {
+      return res.status(403).json({ error: 'Unauthorized action for the user.' });
+    }
+
     // Check if the user has enough storage
     if (user.currentStorage + fileSize > user.maxStorage) {
-      return res.status(400).json({ error: 'Insufficient storage' });
+      return res.status(400).json({ error: 'Insufficient storage.' });
     }
 
     // Proceed with file upload if storage is available

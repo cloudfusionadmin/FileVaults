@@ -102,8 +102,14 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
     // Listen for when files are added
     uppy.on('file-added', (file) => {
       const remainingStorage = maxStorage - currentStorage;
+      if (remainingStorage <= 0) {
+        setError('No available storage.');
+        uppy.removeFile(file.id); // Prevent the file from being uploaded
+        return;
+      }
+
       if (file.size > remainingStorage) {
-        setError(`This file (${file.size / 1024 / 1024} MB) exceeds your available storage (${remainingStorage / 1024 / 1024} MB).`);
+        setError(`This file (${(file.size / 1024 / 1024).toFixed(2)} MB) exceeds your available storage (${(remainingStorage / 1024 / 1024).toFixed(2)} MB).`);
         uppy.removeFile(file.id); // Prevent the file from being uploaded
       } else {
         setError(''); // Clear the error if the file fits
@@ -128,7 +134,7 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
         hideUploadButton={false} // Show the "Upload" button
         hideProgressAfterFinish={false}
         showProgressDetails={true}
-        note={`Images, PDFs, DOCX, ZIP, and APP files only, up to ${Math.max(0, maxStorage - currentStorage) / 1024 / 1024} MB. Max 5 files.`}
+        note={`Images, PDFs, DOCX, ZIP, and APP files only. Remaining storage: ${(Math.max(0, maxStorage - currentStorage) / 1024 / 1024).toFixed(2)} MB. Max 5 files.`}
         width={400}
         height={200}
         plugins={[]}
