@@ -35,29 +35,20 @@ function RegisterForm({ clientSecret, customerId }) {
     }
 
     try {
-      // Create payment method using PaymentElement
-      const { error: paymentError, paymentMethod } = await stripe.createPaymentMethod({
+      // Confirm the payment using Stripe and PaymentElement
+      const { error: stripeError } = await stripe.confirmPayment({
         elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/login`,
+        },
       });
 
-      // Log the result to verify what's returned
-      console.log('Payment method result:', paymentMethod);
-
-      if (paymentError) {
-        console.error('Payment method creation failed:', paymentError);
-        setError(paymentError.message);
+      if (stripeError) {
+        setError(stripeError.message);
         return;
       }
 
-      if (!paymentMethod || !paymentMethod.id) {
-        console.error('No payment method returned');
-        setError('Failed to create a payment method.');
-        return;
-      }
-
-      console.log('PaymentMethod created:', paymentMethod.id); // Log for debugging
-
-      // Send user data to the backend, including paymentMethod.id
+      // After successful payment, send user data to the backend
       const userResponse = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -68,22 +59,13 @@ function RegisterForm({ clientSecret, customerId }) {
           email, 
           password, 
           plan, 
-          paymentMethodId: paymentMethod.id,  // Pass paymentMethodId to the backend
+          customerId,  // Pass the customerId returned from Stripe to the backend
         }),
       });
 
-      const { clientSecret } = await userResponse.json();
-
-      // Confirm the payment using Stripe
-      const { error: stripeError } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/login`,
-        },
-      });
-
-      if (stripeError) {
-        setError(stripeError.message);
+      if (!userResponse.ok) {
+        const userError = await userResponse.json();
+        setError(userError.msg || 'Failed to complete registration.');
         return;
       }
 
@@ -158,16 +140,16 @@ export default function RegisterPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: '', 
+          username: '', // You might need to change how username and other fields are passed
           email: '',
           password: '',
           plan: 'basic',
         }),
       });
 
-      const data = await response.json();
-      setClientSecret(data.clientSecret);
-      setCustomerId(data.customerId);
+      const { clientSecret, customerId } = await response.json();
+      setClientSecret(clientSecret);
+      setCustomerId(customerId);
     };
 
     fetchClientSecret();

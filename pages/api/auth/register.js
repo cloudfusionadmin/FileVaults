@@ -17,7 +17,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { username, email, password, plan, paymentMethodId } = req.body;
+    const { username, email, password, plan } = req.body;
 
     try {
       // Check if the user already exists
@@ -27,35 +27,21 @@ export default async function handler(req, res) {
         return res.status(400).json({ msg: 'User already exists' });
       }
 
-      // Step 1: Create a Stripe customer
+      // Get the price ID based on the selected plan
+      const priceId = getPriceId(plan);
+
+      // Create Stripe customer
       const customer = await stripe.customers.create({
         email,
         name: username,
       });
 
-      // Step 2: Attach payment method to the customer
-      await stripe.paymentMethods.attach(paymentMethodId, {
-        customer: customer.id,
-      });
-
-      // Step 3: Set the default payment method on the customer
-      await stripe.customers.update(customer.id, {
-        invoice_settings: {
-          default_payment_method: paymentMethodId,
-        },
-      });
-
-      // Step 4: Create the subscription with the default payment method
-      const priceId = getPriceId(plan);
+      // Create a subscription for the customer
       const subscription = await stripe.subscriptions.create({
         customer: customer.id,
         items: [{ price: priceId }],
-        default_payment_method: paymentMethodId, // Use the payment method for the subscription
         expand: ['latest_invoice.payment_intent'],
       });
-
-      // Step 5: Retrieve the clientSecret from the Payment Intent
-      const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
 
       // Hash the user's password and save the user to the database
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -64,11 +50,14 @@ export default async function handler(req, res) {
         username,
         email,
         password: hashedPassword,
-        stripeCustomerId: customer.id,  // Save Stripe customer ID
+        stripeCustomerId: customer.id,  // Save the Stripe customer ID
         plan,  // Save selected plan
       });
 
+      const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
+
       res.status(200).json({ clientSecret, customerId: customer.id });
+
     } catch (err) {
       console.error('Stripe Subscription Error:', err.message);
       res.status(500).json({ error: 'Server error: ' + err.message });
