@@ -40,13 +40,16 @@ function RegisterForm({ clientSecret, customerId }) {
         elements,
       });
 
+      // Log the result to verify what's returned
+      console.log('Payment method result:', paymentMethod);
+
       if (paymentError) {
         console.error('Payment method creation failed:', paymentError);
         setError(paymentError.message);
         return;
       }
 
-      if (!paymentMethod) {
+      if (!paymentMethod || !paymentMethod.id) {
         console.error('No payment method returned');
         setError('Failed to create a payment method.');
         return;
@@ -68,12 +71,6 @@ function RegisterForm({ clientSecret, customerId }) {
           paymentMethodId: paymentMethod.id,  // Pass paymentMethodId to the backend
         }),
       });
-
-      if (!userResponse.ok) {
-        const userError = await userResponse.json();
-        setError(userError.msg || 'Registration failed.');
-        return;
-      }
 
       const { clientSecret } = await userResponse.json();
 
