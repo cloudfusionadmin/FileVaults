@@ -32,7 +32,7 @@ export default function Login() {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('username', data.username);
-        router.push('/dashboard'); // Redirect to dashboard
+        router.push('/'); // Redirect to dashboard
       } else {
         const errorData = await response.json();
         setError(errorData.msg || 'Login failed');
