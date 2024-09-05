@@ -82,55 +82,64 @@ export default function Dashboard() {
         setUsername(storedUsername);
         refreshToken(); // Check token expiry and refresh if necessary
         fetchFiles(storedUserId); // Fetch files if authenticated
+        fetchStorageInfo(); // Fetch storage info
       }
     }
   }, []);
 
-  useEffect(() => {
-    let filtered = { ...filesByFormat };
-
-    // Apply search filtering
-    if (searchTerm) {
-      filtered = Object.keys(filtered).reduce((acc, format) => {
-        const filteredFiles = filtered[format].files.filter(file =>
-          file.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        if (filteredFiles.length > 0) {
-          acc[format] = {
-            files: filteredFiles,
-            totalSize: filtered[format].totalSize,
-          };
-        }
-        return acc;
-      }, {} as FilesByFormatType);
-    }
-
-    // Apply sorting by actual file type
-    if (sortType) {
-      const formatOrder = ['image', 'pdf', 'document', 'other']; // Define your desired order
-      const formatType = (format: string) => {
-        if (/\.(jpg|jpeg|png|gif)$/i.test(format)) return 'image';
-        if (/\.(pdf)$/i.test(format)) return 'pdf';
-        if (/\.(txt|csv|docx|xlsx)$/i.test(format)) return 'document';
-        return 'other';
-      };
-
-      const sorted = Object.keys(filtered).sort((a, b) => {
-        const typeA = formatType(a);
-        const typeB = formatType(b);
-        return formatOrder.indexOf(typeA) - formatOrder.indexOf(typeB);
+  // Fetch storage info (current storage and max storage)
+  const fetchStorageInfo = async () => {
+    try {
+      const response = await fetch('/api/storage-info', {
+        headers: {
+          'x-auth-token': localStorage.getItem('token') || '',
+        },
       });
 
-      const sortedFiles: FilesByFormatType = {};
-      sorted.forEach(format => {
-        sortedFiles[format] = filtered[format];
-      });
-      filtered = sortedFiles;
+      if (response.ok) {
+        const data = await response.json();
+        setStorageInfo({
+          used: data.currentStorage / (1024 * 1024), // Convert to MB
+          capacity: data.maxStorage / (1024 * 1024), // Convert to MB
+          totalFiles: storageInfo.totalFiles, // Keep total files as is for now
+        });
+      } else {
+        console.error('Failed to fetch storage info');
+      }
+    } catch (error) {
+      console.error('Error fetching storage info:', error);
     }
+  };
 
-    setFilteredFiles(filtered);
-  }, [searchTerm, filesByFormat, sortType]);
+  const fetchFiles = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/fetchFiles?userId=${userId}`, {
+        headers: {
+          'x-auth-token': localStorage.getItem('token') || '',
+        },
+      });
+      if (response.ok) {
+        const { filesByFormat, totalFiles, totalSize } = await response.json() as {
+          filesByFormat: FilesByFormatType;
+          totalFiles: number;
+          totalSize: number;
+        };
+        setFilesByFormat(filesByFormat);
+        setFilteredFiles(filesByFormat);
+        setStorageInfo((prevInfo) => ({
+          ...prevInfo,
+          used: parseFloat(totalSize.toString()),
+          totalFiles,
+        }));
+      } else {
+        console.error('Failed to fetch files');
+      }
+    } catch (error) {
+      console.error('Error fetching files:', error);
+    }
+  };
 
+  // Added refreshToken function
   const refreshToken = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -159,35 +168,6 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Error refreshing token:', err);
       return null;
-    }
-  };
-  
-
-  const fetchFiles = async (userId: string) => {
-    try {
-      const response = await fetch(`/api/fetchFiles?userId=${userId}`, {
-        headers: {
-          'x-auth-token': localStorage.getItem('token') || '',
-        },
-      });
-      if (response.ok) {
-        const { filesByFormat, totalFiles, totalSize } = await response.json() as {
-          filesByFormat: FilesByFormatType;
-          totalFiles: number;
-          totalSize: number;
-        };
-        setFilesByFormat(filesByFormat);
-        setFilteredFiles(filesByFormat);
-        setStorageInfo((prevInfo) => ({
-          ...prevInfo,
-          used: parseFloat(totalSize.toString()),
-          totalFiles,
-        }));
-      } else {
-        console.error('Failed to fetch files');
-      }
-    } catch (error) {
-      console.error('Error fetching files:', error);
     }
   };
 
@@ -501,7 +481,7 @@ export default function Dashboard() {
         </div>
       )}
 
-<footer className={styles.footer}>
+      <footer className={styles.footer}>
         <p>&copy; 2024 SwiftInfoTech.com.au. All rights reserved.</p>
         <ul className={styles.footerLinks}>
           <li><Link href="/contact">Contact</Link></li>
