@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSession } from 'next-auth/react';
-import User from './../../models/User';
+import User from '../../models/User';
 
 // Define handler function
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

@@ -17,8 +17,8 @@ interface FileUploaderProps {
 }
 
 export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
-  const [currentStorage, setCurrentStorage] = useState(0);
-  const [maxStorage, setMaxStorage] = useState(0);
+  const [currentStorage, setCurrentStorage] = useState<number>(0);
+  const [maxStorage, setMaxStorage] = useState<number>(0);
   const [error, setError] = useState('');
 
   // Fetch storage info from the backend
@@ -26,11 +26,13 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
     const fetchStorageInfo = async () => {
       try {
         const response = await fetch('/api/storage-info'); // Assume API route to get storage info
+        if (!response.ok) throw new Error("Failed to fetch storage info");
         const data = await response.json();
         setCurrentStorage(data.currentStorage);
         setMaxStorage(data.maxStorage);
       } catch (error) {
         console.error('Error fetching storage info:', error);
+        setError('Error fetching storage info. Please try again later.');
       }
     };
 
@@ -41,7 +43,7 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
     const uppy = new Uppy({
       autoProceed: false, // Wait for user to click "Upload" before starting
       restrictions: {
-        maxFileSize: Math.max(0, maxStorage - currentStorage), // Restrict file size to remaining storage
+        maxFileSize: maxStorage > 0 ? Math.max(0, maxStorage - currentStorage) : null, // Restrict file size to remaining storage
         allowedFileTypes: [
           "image/*",
           "application/pdf",
