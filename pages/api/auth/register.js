@@ -27,20 +27,26 @@ export default async function handler(req, res) {
         return res.status(400).json({ msg: 'User already exists' });
       }
 
-      // Create Stripe customer
+      // Step 1: Create a Stripe customer
       const customer = await stripe.customers.create({
         email,
         name: username,
-        payment_method: paymentMethodId, // Attach payment method to the customer
+      });
+
+      // Step 2: Attach payment method to the customer
+      await stripe.paymentMethods.attach(paymentMethodId, {
+        customer: customer.id,
+      });
+
+      // Step 3: Set the default payment method on the customer
+      await stripe.customers.update(customer.id, {
         invoice_settings: {
-          default_payment_method: paymentMethodId, // Set the default payment method
+          default_payment_method: paymentMethodId,
         },
       });
 
-      // Get the price ID based on the selected plan
+      // Step 4: Create the subscription with the default payment method
       const priceId = getPriceId(plan);
-
-      // Create a subscription for the customer with the payment method
       const subscription = await stripe.subscriptions.create({
         customer: customer.id,
         items: [{ price: priceId }],
@@ -48,28 +54,21 @@ export default async function handler(req, res) {
         expand: ['latest_invoice.payment_intent'],
       });
 
-      // Ensure that the subscription is properly created and contains a clientSecret
-      const clientSecret = subscription?.latest_invoice?.payment_intent?.client_secret;
+      // Step 5: Retrieve the clientSecret from the Payment Intent
+      const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
 
-      if (!clientSecret) {
-        throw new Error('Failed to retrieve client secret from Stripe.');
-      }
-
-      // Hash the user's password
+      // Hash the user's password and save the user to the database
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Save the user in the database
       const user = await User.create({
         username,
         email,
         password: hashedPassword,
-        stripeCustomerId: customer.id, // Save the Stripe customer ID
-        plan, // Save the selected plan
+        stripeCustomerId: customer.id,  // Save Stripe customer ID
+        plan,  // Save selected plan
       });
 
-      // Send success response along with clientSecret for frontend confirmation
       res.status(200).json({ clientSecret, customerId: customer.id });
-
     } catch (err) {
       console.error('Stripe Subscription Error:', err.message);
       res.status(500).json({ error: 'Server error: ' + err.message });
