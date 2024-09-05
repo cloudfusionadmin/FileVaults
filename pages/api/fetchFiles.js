@@ -20,6 +20,9 @@ export default async function handler(req, res) {
         // Verify the JWT token using the secret key
         decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
       } catch (err) {
+        if (err.name === 'TokenExpiredError') {
+          return res.status(403).json({ error: 'Token expired. Please log in again.' });
+        }
         return res.status(403).json({ error: 'Invalid token.' });
       }
 
@@ -47,7 +50,7 @@ export default async function handler(req, res) {
         Prefix: `${userId}/`, // This ensures that only files under the user's directory are listed
       }).promise();
 
-      if (!data.Contents) {
+      if (!data.Contents || data.Contents.length === 0) {
         return res.status(200).json({ filesByFormat: {}, totalFiles: 0, totalSize: '0 MB' });
       }
 
@@ -84,6 +87,7 @@ export default async function handler(req, res) {
       // Update the currentStorage field in the database (storing as bytes)
       await User.update({ currentStorage: totalSizeBytes }, { where: { id: userId } });
 
+      // Respond with the files and storage info
       res.status(200).json({
         filesByFormat,
         totalFiles,

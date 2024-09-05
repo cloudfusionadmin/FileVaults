@@ -75,10 +75,31 @@ export default function Dashboard() {
     } else {
       setUserId(storedUserId);
       setUsername(storedUsername);
+      verifyToken(token); // Check if token is valid
       fetchFiles(storedUserId); // Fetch files if authenticated
       fetchStorageInfo(); // Fetch storage info
     }
   }, []);
+
+   // Verify the token and ensure it's valid
+const verifyToken = async (token: string) => {
+  try {
+    const response = await fetch('/api/auth/verify-token', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.log('Invalid or expired token, redirecting to login.');
+      router.push('/login'); // Redirect to login if token is invalid/expired
+    }
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    router.push('/login');
+  }
+};
+
 
   // Fetch storage info (current storage and max storage)
   const fetchStorageInfo = async () => {

@@ -4,19 +4,29 @@ import User from '../../models/User';
 
 // Define handler function
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Extract token from authorization headers
-  const token = req.headers['authorization']?.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
   try {
-    // Verify and decode the JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as { id: string };
+    // Extract token from authorization headers
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized. Token missing.' });
+    }
+
+    let decoded;
+    try {
+      // Verify and decode the JWT token
+      decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as { id: string };
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({ error: 'Token expired' });
+      }
+      return res.status(403).json({ error: 'Invalid token' });
+    }
+
+    // Ensure that the decoded token has an id field
     if (!decoded?.id) {
-      return res.status(401).json({ error: 'Invalid token' });
+      return res.status(401).json({ error: 'Invalid token payload' });
     }
 
     // Find the user by id (from the decoded token)
@@ -34,10 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     console.error('Error fetching storage info:', error);
 
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expired' });
-    }
-
+    // Return appropriate error for different situations
     return res.status(500).json({ error: 'Server error' });
   }
 }
