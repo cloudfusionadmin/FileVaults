@@ -19,9 +19,9 @@ export default async function handler(req, res) {
       const bucketName = process.env.R2_BUCKET_NAME;
 
       // Fetch the files for the specific user by using the userId as the Prefix
-      const data = await s3.listObjectsV2({
+      const data = await s3.listObjectsV2({ 
         Bucket: bucketName,
-        Prefix: `${userId}/`, // This ensures that only files under the user's directory are listed
+        Prefix: `${userId}/`,  // This ensures that only files under the user's directory are listed
       }).promise();
 
       if (!data.Contents) {
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
         const fileSizeMB = item.Size / 1024 / 1024;
         acc[extension].files.push({
           name: item.Key.replace(`${userId}/`, ''), // Remove the userId prefix from the file name
-          size: `${fileSizeMB.toFixed(2)} MB`, // Reduced precision for display purposes
+          size: `${fileSizeMB.toFixed(2)} MB`, // Adjust to 2 decimal places for better readability
           url: s3.getSignedUrl('getObject', {
             Bucket: bucketName,
             Key: item.Key,
@@ -51,18 +51,20 @@ export default async function handler(req, res) {
         return acc;
       }, {});
 
-      // Calculate total number of files and total size in bytes
+      // Calculate total number of files and total size
       const totalFiles = data.Contents.length;
       const totalSizeMB = data.Contents.reduce((acc, item) => acc + item.Size, 0) / 1024 / 1024;
-      const totalSizeInBytes = Math.round(totalSizeMB * 1024 * 1024); // Convert MB to bytes and round
 
-      // Update the currentStorage field in the database
-      await User.update({ currentStorage: totalSizeInBytes }, { where: { id: userId } });
+      // Convert totalSizeMB to bytes for storing in the database
+      const totalSizeBytes = Math.round(totalSizeMB * 1024 * 1024); // Convert MB to bytes and round to integer
+
+      // Update the currentStorage field in the database (storing as bytes)
+      await User.update({ currentStorage: totalSizeBytes }, { where: { id: userId } });
 
       res.status(200).json({
         filesByFormat,
         totalFiles,
-        totalSize: `${totalSizeMB.toFixed(2)} MB`, // Reduced precision for display
+        totalSize: `${totalSizeMB.toFixed(2)} MB`, // Total size in MB
       });
     } else {
       res.setHeader('Allow', ['GET']);
