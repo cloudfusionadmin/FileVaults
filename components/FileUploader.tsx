@@ -20,19 +20,25 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
   const [currentStorage, setCurrentStorage] = useState<number>(0);
   const [maxStorage, setMaxStorage] = useState<number>(0);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);  // Loading state for storage info
 
   // Fetch storage info from the backend
   useEffect(() => {
     const fetchStorageInfo = async () => {
       try {
+        setLoading(true);
         const response = await fetch('/api/storage-info'); // Assume API route to get storage info
-        if (!response.ok) throw new Error("Failed to fetch storage info");
+        if (!response.ok) throw new Error(`Failed to fetch storage info: ${response.statusText}`);
+        
         const data = await response.json();
-        setCurrentStorage(data.currentStorage);
-        setMaxStorage(data.maxStorage);
+        setCurrentStorage(data.currentStorage || 0);
+        setMaxStorage(data.maxStorage || 0);
+        setError('');
       } catch (error) {
         console.error('Error fetching storage info:', error);
         setError('Error fetching storage info. Please try again later.');
+      } finally {
+        setLoading(false);  // Stop loading after storage info is fetched
       }
     };
 
@@ -60,31 +66,36 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
       },
     }).use(AwsS3, {
       getUploadParameters: async (file: UppyFile) => {
-        const arrayBuffer = await new Response(file.data).arrayBuffer();
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          headers: {
-            accept: "application/json",
-          },
-          body: JSON.stringify({
-            userId,
-            filename: file.name,
-            fileHash: await sha256(arrayBuffer),
-            contentType: file.type,
-          }),
-        });
+        try {
+          const arrayBuffer = await new Response(file.data).arrayBuffer();
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            headers: {
+              accept: "application/json",
+            },
+            body: JSON.stringify({
+              userId,
+              filename: file.name,
+              fileHash: await sha256(arrayBuffer),
+              contentType: file.type,
+            }),
+          });
 
-        if (!response.ok) throw new Error("Unsuccessful request");
+          if (!response.ok) throw new Error("Unsuccessful request");
 
-        const data = await response.json();
-        return {
-          method: data.method,
-          url: data.url,
-          fields: {},
-          headers: {
-            "Content-Type": file.type || "application/octet-stream",
-          },
-        };
+          const data = await response.json();
+          return {
+            method: data.method,
+            url: data.url,
+            fields: {},
+            headers: {
+              "Content-Type": file.type || "application/octet-stream",
+            },
+          };
+        } catch (err) {
+          setError(`Error creating upload parameters: ${err.message}`);
+          throw err;
+        }
       },
     });
 
@@ -92,7 +103,7 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
     uppy.on('file-added', (file) => {
       const remainingStorage = maxStorage - currentStorage;
       if (file.size > remainingStorage) {
-        setError('This file exceeds your available storage.');
+        setError(`This file (${file.size / 1024 / 1024} MB) exceeds your available storage (${remainingStorage / 1024 / 1024} MB).`);
         uppy.removeFile(file.id); // Prevent the file from being uploaded
       } else {
         setError(''); // Clear the error if the file fits
@@ -108,6 +119,7 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
 
   return (
     <div className={styles.uploaderContainer}>
+      {loading && <p>Loading storage information...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>} {/* Display error if any */}
       <Dashboard
         uppy={uppy}
@@ -116,7 +128,7 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
         hideUploadButton={false} // Show the "Upload" button
         hideProgressAfterFinish={false}
         showProgressDetails={true}
-        note="Images, PDFs, DOCX, ZIP, and APP files only, up to 20MB. Max 5 files."
+        note={`Images, PDFs, DOCX, ZIP, and APP files only, up to ${Math.max(0, maxStorage - currentStorage) / 1024 / 1024} MB. Max 5 files.`}
         width={400}
         height={200}
         plugins={[]}
