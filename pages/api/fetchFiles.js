@@ -19,9 +19,9 @@ export default async function handler(req, res) {
       const bucketName = process.env.R2_BUCKET_NAME;
 
       // Fetch the files for the specific user by using the userId as the Prefix
-      const data = await s3.listObjectsV2({ 
+      const data = await s3.listObjectsV2({
         Bucket: bucketName,
-        Prefix: `${userId}/`,  // This ensures that only files under the user's directory are listed
+        Prefix: `${userId}/`, // This ensures that only files under the user's directory are listed
       }).promise();
 
       if (!data.Contents) {
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
         const fileSizeMB = item.Size / 1024 / 1024;
         acc[extension].files.push({
           name: item.Key.replace(`${userId}/`, ''), // Remove the userId prefix from the file name
-          size: `${fileSizeMB.toFixed(2)} MB`,
+          size: `${fileSizeMB.toFixed(2)} MB`, // Reduced precision for display purposes
           url: s3.getSignedUrl('getObject', {
             Bucket: bucketName,
             Key: item.Key,
@@ -51,17 +51,18 @@ export default async function handler(req, res) {
         return acc;
       }, {});
 
-      // Calculate total number of files and total size
+      // Calculate total number of files and total size in bytes
       const totalFiles = data.Contents.length;
       const totalSizeMB = data.Contents.reduce((acc, item) => acc + item.Size, 0) / 1024 / 1024;
+      const totalSizeInBytes = Math.round(totalSizeMB * 1024 * 1024); // Convert MB to bytes and round
 
       // Update the currentStorage field in the database
-      await User.update({ currentStorage: totalSizeMB }, { where: { id: userId } });
+      await User.update({ currentStorage: totalSizeInBytes }, { where: { id: userId } });
 
       res.status(200).json({
         filesByFormat,
         totalFiles,
-        totalSize: `${totalSizeMB.toFixed(2)} MB`,
+        totalSize: `${totalSizeMB.toFixed(2)} MB`, // Reduced precision for display
       });
     } else {
       res.setHeader('Allow', ['GET']);
