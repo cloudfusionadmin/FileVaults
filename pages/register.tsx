@@ -41,9 +41,18 @@ function RegisterForm({ clientSecret, customerId }) {
       });
 
       if (paymentError) {
+        console.error('Payment method creation failed:', paymentError);
         setError(paymentError.message);
         return;
       }
+
+      if (!paymentMethod) {
+        console.error('No payment method returned');
+        setError('Failed to create a payment method.');
+        return;
+      }
+
+      console.log('PaymentMethod created:', paymentMethod.id); // Log for debugging
 
       // Send user data to the backend, including paymentMethod.id
       const userResponse = await fetch('/api/auth/register', {
@@ -59,6 +68,12 @@ function RegisterForm({ clientSecret, customerId }) {
           paymentMethodId: paymentMethod.id,  // Pass paymentMethodId to the backend
         }),
       });
+
+      if (!userResponse.ok) {
+        const userError = await userResponse.json();
+        setError(userError.msg || 'Registration failed.');
+        return;
+      }
 
       const { clientSecret } = await userResponse.json();
 
