@@ -53,19 +53,21 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
         allowedFileTypes: [
           "image/*",
           "application/pdf",
-          "application/msword", // .doc files
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx files
-          "text/csv", // .csv files
-          "application/vnd.ms-excel", // .xls files
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx files
-          "application/zip", // .zip files
-          "application/x-zip-compressed", // Compressed .zip files
-          "application/octet-stream", // .app files and other binary files
+          "application/msword", 
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "text/csv",
+          "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/zip",
+          "application/octet-stream",
         ],
         maxNumberOfFiles: 5, // Allow up to 5 files at once
       },
     }).use(AwsS3, {
       getUploadParameters: async (file: UppyFile) => {
+        if (!maxStorage || !currentStorage) {
+          throw new Error("Storage info is not loaded yet.");
+        }
         try {
           const arrayBuffer = await new Response(file.data).arrayBuffer();
           const response = await fetch("/api/upload", {
@@ -80,9 +82,9 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
               contentType: file.type,
             }),
           });
-
+  
           if (!response.ok) throw new Error("Unsuccessful request");
-
+  
           const data = await response.json();
           return {
             method: data.method,
@@ -98,30 +100,21 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
         }
       },
     });
-
-    // Listen for when files are added
+  
+    // Check the remaining storage before adding the file
     uppy.on('file-added', (file) => {
       const remainingStorage = maxStorage - currentStorage;
-      if (remainingStorage <= 0) {
-        setError('No available storage.');
-        uppy.removeFile(file.id); // Prevent the file from being uploaded
-        return;
-      }
-
       if (file.size > remainingStorage) {
-        setError(`This file (${(file.size / 1024 / 1024).toFixed(2)} MB) exceeds your available storage (${(remainingStorage / 1024 / 1024).toFixed(2)} MB).`);
+        setError(`This file (${file.size / 1024 / 1024} MB) exceeds your available storage (${remainingStorage / 1024 / 1024} MB).`);
         uppy.removeFile(file.id); // Prevent the file from being uploaded
       } else {
         setError(''); // Clear the error if the file fits
       }
     });
-
-    uppy.on("complete", (result) => {
-      onUploadSuccess(result);
-    });
-
+  
     return uppy;
   }, [onUploadSuccess, userId, currentStorage, maxStorage]);
+  
 
   return (
     <div className={styles.uploaderContainer}>
