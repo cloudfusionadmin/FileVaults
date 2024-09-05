@@ -1,7 +1,6 @@
 import { sequelize } from '../../../config/database';
 import User from '../../../models/User';
 import bcrypt from 'bcryptjs';
-import { validationResult } from 'express-validator';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -12,54 +11,50 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     await sequelize.sync();
 
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const { username, email, password, plan } = req.body;
 
     try {
       // Check if the user already exists
-      let existingUser = await User.findOne({ where: { email } });
+      const existingUser = await User.findOne({ where: { email } });
 
       if (existingUser) {
         return res.status(400).json({ msg: 'User already exists' });
       }
 
-      // Get the price ID based on the selected plan
-      const priceId = getPriceId(plan);
+      // Hash the password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
 
-      // Create Stripe customer
-      const customer = await stripe.customers.create({
-        email,
-        name: username,
-      });
-
-      // Create a subscription for the customer
-      const subscription = await stripe.subscriptions.create({
-        customer: customer.id,
-        items: [{ price: priceId }],
-        expand: ['latest_invoice.payment_intent'],
-      });
-
-      // Hash the user's password and save the user to the database
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      const user = await User.create({
+      // Create the user in the database but don't save it yet
+      const user = User.build({
         username,
         email,
         password: hashedPassword,
-        stripeCustomerId: customer.id,  // Save the Stripe customer ID
-        plan,  // Save selected plan
+        plan,
       });
 
-      const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
+      // Create Stripe Checkout session for subscription
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'subscription',
+        line_items: [
+          {
+            price: getPriceId(plan),
+            quantity: 1,
+          },
+        ],
+        customer_email: email,
+        success_url: `${process.env.DOMAIN}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.DOMAIN}/cancel`,
+      });
 
-      res.status(200).json({ clientSecret, customerId: customer.id });
+      // Save the user temporarily
+      await user.save();
 
+      // Send sessionId back to the frontend
+      res.status(200).json({ sessionId: session.id });
     } catch (err) {
-      console.error('Stripe Subscription Error:', err.message);
+      console.error('Stripe Checkout Error:', err.message);
       res.status(500).json({ error: 'Server error: ' + err.message });
     }
   } else {
