@@ -1,5 +1,5 @@
 import AWS from 'aws-sdk';
-import User from '../../../models/User'; // Import the User model
+import User from './../../models/User'; // Import the User model
 
 export default async function handler(req, res) {
   try {
