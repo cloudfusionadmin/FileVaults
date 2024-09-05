@@ -88,17 +88,17 @@ export default async function handler(req, res) {
       await User.update({ currentStorage: totalSizeBytes }, { where: { id: userId } });
 
       // Respond with the files and storage info
-      res.status(200).json({
+      return res.status(200).json({
         filesByFormat,
         totalFiles,
         totalSize: `${totalSizeMB.toFixed(2)} MB`, // Total size in MB
       });
     } else {
       res.setHeader('Allow', ['GET']);
-      res.status(405).end(`Method ${method} Not Allowed`);
+      return res.status(405).end(`Method ${method} Not Allowed`);
     }
   } catch (error) {
-    console.error('Error fetching files:', error);
-    res.status(500).json({ error: 'Failed to fetch files' });
+    console.error('Error fetching files:', error.message, error.stack);
+    return res.status(500).json({ error: 'Failed to fetch files' });
   }
 }

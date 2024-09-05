@@ -2,12 +2,11 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import User from '../../models/User';
 
-// Define handler function
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Extract token from authorization headers
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const token = authHeader && authHeader.split(' ')[1]; // Ensure the token is correctly split
 
     if (!token) {
       return res.status(401).json({ error: 'Unauthorized. Token missing.' });
@@ -19,21 +18,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as { id: string };
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
-        return res.status(401).json({ error: 'Token expired' });
+        return res.status(401).json({ error: 'Token expired. Please log in again.' });
       }
-      return res.status(403).json({ error: 'Invalid token' });
+      return res.status(403).json({ error: 'Invalid token. Please log in again.' });
     }
 
-    // Ensure that the decoded token has an id field
+    // Ensure that the decoded token contains the user ID
     if (!decoded?.id) {
-      return res.status(401).json({ error: 'Invalid token payload' });
+      return res.status(401).json({ error: 'Invalid token payload.' });
     }
 
-    // Find the user by id (from the decoded token)
+    // Find the user by the decoded token's ID
     const user = await User.findOne({ where: { id: decoded.id } });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'User not found.' });
     }
 
     // Return storage info
@@ -42,9 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       maxStorage: user.maxStorage,
     });
   } catch (error) {
-    console.error('Error fetching storage info:', error);
-
-    // Return appropriate error for different situations
-    return res.status(500).json({ error: 'Server error' });
+    console.error('Error fetching storage info:', error.message);
+    return res.status(500).json({ error: 'Server error. Please try again later.' });
   }
 }
