@@ -45,10 +45,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'User not found.' });
     }
 
+    // Ensure user's maxStorage and currentStorage values are valid
+    const maxStorage = user.maxStorage || 100 * 1024 * 1024 * 1024; // Default to 100GB if not set (convert to bytes)
+    const currentStorage = user.currentStorage || 0;
+
     // Return storage info along with a refreshed token if necessary
     return res.status(200).json({
-      currentStorage: user.currentStorage,
-      maxStorage: user.maxStorage,
+      currentStorage,
+      maxStorage,
       ...(newToken ? { token: newToken } : {}), // Send the new token back to the client if it was refreshed
     });
   } catch (error) {

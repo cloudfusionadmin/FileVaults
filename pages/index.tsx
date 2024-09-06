@@ -106,29 +106,31 @@ export default function Dashboard() {
     try {
       const response = await fetch('/api/storage-info', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Send JWT in the header
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
-
+  
+      const data = await response.json();
+  
       if (response.ok) {
-        const data = await response.json();
+        // If a new token was returned, update localStorage
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
+  
+        // Update storage information
         setStorageInfo({
           used: data.currentStorage / (1024 * 1024), // Convert to MB
           capacity: data.maxStorage / (1024 * 1024), // Convert to MB
           totalFiles: storageInfo.totalFiles, // Keep total files as is for now
         });
       } else {
-        const errorData = await response.json();
-        console.error('Error fetching storage info:', errorData.error);
-        if (response.status === 401) {
-          router.push('/login');
-        }
+        console.error('Failed to fetch storage info:', data.error);
       }
     } catch (error) {
       console.error('Error fetching storage info:', error);
     }
   };
-
   const fetchFiles = async (userId: string) => {
     try {
       const response = await fetch(`/api/fetchFiles?userId=${userId}`, {
