@@ -1,6 +1,7 @@
 import AWS from 'aws-sdk';
 import jwt from 'jsonwebtoken'; // For verifying JWT
 import User from '../../models/User'; // Import the User model
+import { refreshToken } from '../../utils/auth'; // Import refreshToken utility
 
 export default async function handler(req, res) {
   try {
@@ -9,7 +10,7 @@ export default async function handler(req, res) {
     if (method === 'GET') {
       // Get JWT token from the Authorization header
       const authHeader = req.headers['authorization'];
-      const token = authHeader && authHeader.split(' ')[1]; // Extract token
+      let token = authHeader && authHeader.split(' ')[1]; // Extract token
 
       if (!token) {
         return res.status(401).json({ error: 'Unauthorized. Token missing.' });
@@ -21,15 +22,23 @@ export default async function handler(req, res) {
         decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
       } catch (err) {
         if (err.name === 'TokenExpiredError') {
-          return res.status(403).json({ error: 'Token expired. Please log in again.' });
+          // Try to refresh the token
+          const newToken = await refreshToken();
+          if (!newToken) {
+            return res.status(403).json({ error: 'Token expired and refresh failed.' });
+          }
+          // Use the new token for this request
+          token = newToken;
+          decoded = jwt.verify(token, process.env.JWT_SECRET_KEY); // Verify the new token
+        } else {
+          return res.status(403).json({ error: 'Invalid token.' });
         }
-        return res.status(403).json({ error: 'Invalid token.' });
       }
 
       const { userId } = req.query;
 
       // Check if the userId from the token matches the userId passed in the query
-      if (decoded.user.id.toString() !== userId.toString()) { // Fix: ensure decoded.user.id is checked
+      if (decoded.id !== userId) {
         return res.status(403).json({ error: 'Unauthorized access to another user’s data.' });
       }
 
