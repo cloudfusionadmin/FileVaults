@@ -27,7 +27,7 @@ export default function Dashboard() {
   const [filteredFiles, setFilteredFiles] = useState<FilesByFormatType>({});
   const [storageInfo, setStorageInfo] = useState({
     used: 0,
-    capacity: 0, // Initialize to 0 and fetch dynamically
+    capacity: 100 * 1024, // Capacity in MB
     totalFiles: 0,
   });
   const [userId, setUserId] = useState<string | null>(null);
@@ -37,30 +37,30 @@ export default function Dashboard() {
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortType, setSortType] = useState<string>(''); 
+  const [sortType, setSortType] = useState<string>(''); // Updated state for sort type
   const [requires2FA, setRequires2FA] = useState(false);
   const [twoFactorToken, setTwoFactorToken] = useState('');
-  const [layoutMode, setLayoutMode] = useState('list');
-  const [showIdleModal, setShowIdleModal] = useState(false);
-  const [logoutTimer, setLogoutTimer] = useState<NodeJS.Timeout | null>(null);
+  const [layoutMode, setLayoutMode] = useState('list'); // State for layout mode
+  const [showIdleModal, setShowIdleModal] = useState(false); // State for idle warning modal
+  const [logoutTimer, setLogoutTimer] = useState<NodeJS.Timeout | null>(null); // Timer for automatic logout
   const router = useRouter();
 
   // Idle timer logic
   const handleOnIdle = () => {
-    setShowIdleModal(true);
+    setShowIdleModal(true); // Show the idle warning modal
     const timer = setTimeout(() => {
       handleLogout();
-    }, 60000); 
+    }, 60000); // 1 minute
     setLogoutTimer(timer);
   };
 
   const handleStayConnected = () => {
-    setShowIdleModal(false);
-    if (logoutTimer) clearTimeout(logoutTimer);
+    setShowIdleModal(false); // Hide the idle warning modal
+    if (logoutTimer) clearTimeout(logoutTimer); // Clear the logout timer
   };
 
   const idleTimer = useIdleTimer({
-    timeout: 1000 * 60 * 14,
+    timeout: 1000 * 60 * 14, // 14 minutes before showing the warning
     onIdle: handleOnIdle,
     debounce: 500,
   });
@@ -71,16 +71,17 @@ export default function Dashboard() {
     const storedUsername = localStorage.getItem('username');
 
     if (!token || !storedUserId || !storedUsername) {
-      router.push('/login');
+      router.push('/login'); // Redirect to login if not authenticated
     } else {
       setUserId(storedUserId);
       setUsername(storedUsername);
-      verifyToken(token); 
-      fetchFiles(storedUserId);
-      fetchStorageInfo(); 
+      verifyToken(token); // Check if token is valid
+      fetchFiles(storedUserId); // Fetch files if authenticated
+      fetchStorageInfo(); // Fetch storage info
     }
   }, []);
 
+  // Verify the token and ensure it's valid
   const verifyToken = async (token: string) => {
     try {
       const response = await fetch('/api/auth/verify-token', {
@@ -90,7 +91,9 @@ export default function Dashboard() {
       });
 
       if (!response.ok) {
-        router.push('/login');
+        console.log('Invalid or expired token, redirecting to login.');
+        localStorage.removeItem('token');
+        router.push('/login'); // Redirect to login if token is invalid/expired
       }
     } catch (error) {
       console.error('Error verifying token:', error);
@@ -103,19 +106,23 @@ export default function Dashboard() {
     try {
       const response = await fetch('/api/storage-info', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Send JWT in the header
         },
       });
 
       if (response.ok) {
         const data = await response.json();
         setStorageInfo({
-          used: data.currentStorage / (1024 * 1024), 
-          capacity: data.maxStorage / (1024 * 1024), 
-          totalFiles: storageInfo.totalFiles,
+          used: data.currentStorage / (1024 * 1024), // Convert to MB
+          capacity: data.maxStorage / (1024 * 1024), // Convert to MB
+          totalFiles: storageInfo.totalFiles, // Keep total files as is for now
         });
       } else {
-        console.error('Failed to fetch storage info');
+        const errorData = await response.json();
+        console.error('Error fetching storage info:', errorData.error);
+        if (response.status === 401) {
+          router.push('/login');
+        }
       }
     } catch (error) {
       console.error('Error fetching storage info:', error);
@@ -130,16 +137,24 @@ export default function Dashboard() {
         },
       });
       if (response.ok) {
-        const { filesByFormat, totalFiles, totalSize } = await response.json();
+        const { filesByFormat, totalFiles, totalSize } = await response.json() as {
+          filesByFormat: FilesByFormatType;
+          totalFiles: number;
+          totalSize: number;
+        };
         setFilesByFormat(filesByFormat);
         setFilteredFiles(filesByFormat);
         setStorageInfo((prevInfo) => ({
           ...prevInfo,
-          used: parseFloat(totalSize),
+          used: parseFloat(totalSize.toString()),
           totalFiles,
         }));
       } else {
-        console.error('Failed to fetch files');
+        const errorData = await response.json();
+        console.error('Error fetching files:', errorData.error);
+        if (response.status === 401) {
+          router.push('/login');
+        }
       }
     } catch (error) {
       console.error('Error fetching files:', error);
@@ -165,9 +180,10 @@ export default function Dashboard() {
           },
         });
         if (response.ok) {
-          fetchFiles(userId!); 
+          fetchFiles(userId!); // Refresh the file list after deletion
         } else {
-          console.error('Failed to delete file');
+          const errorData = await response.json();
+          console.error('Error deleting file:', errorData.error);
         }
       } catch (error) {
         console.error('Error deleting file:', error);
@@ -191,7 +207,8 @@ export default function Dashboard() {
         setShareLink(data.url);
         setIsShareModalOpen(true);
       } else {
-        console.error('Failed to generate share link');
+        const errorData = await response.json();
+        console.error('Error generating share link:', errorData.error);
       }
     } catch (error) {
       console.error('Error generating share link:', error);
@@ -219,9 +236,10 @@ export default function Dashboard() {
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem('token', data.newToken);
-        setRequires2FA(false);
+        setRequires2FA(false); // Disable 2FA prompt after successful verification
       } else {
-        console.error('Invalid 2FA token');
+        const errorData = await response.json();
+        console.error('Invalid 2FA token:', errorData.error);
       }
     } catch (error) {
       console.error('Error verifying 2FA token:', error);
@@ -425,8 +443,9 @@ export default function Dashboard() {
               {userId && (
                 <FileUploader
                   userId={userId}
-                  availableStorage={storageInfo.capacity - storageInfo.used}
-                  onUploadSuccess={() => fetchFiles(userId)} 
+                  onUploadSuccess={(result) => {
+                    fetchFiles(userId); // Refresh the file list after a successful upload
+                  }}
                 />
               )}
             </div>
@@ -441,6 +460,7 @@ export default function Dashboard() {
         onCancel={() => setIsModalOpen(false)}
       />
 
+      {/* Idle Warning Modal */}
       {showIdleModal && (
         <div className={styles.idleModal}>
           <div className={styles.idleModalContent}>
