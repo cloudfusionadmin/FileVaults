@@ -92,6 +92,7 @@ export default function Dashboard() {
 
       if (!response.ok) {
         console.log('Invalid or expired token, redirecting to login.');
+        localStorage.removeItem('token');
         router.push('/login'); // Redirect to login if token is invalid/expired
       }
     } catch (error) {
@@ -117,7 +118,11 @@ export default function Dashboard() {
           totalFiles: storageInfo.totalFiles, // Keep total files as is for now
         });
       } else {
-        console.error('Failed to fetch storage info');
+        const errorData = await response.json();
+        console.error('Error fetching storage info:', errorData.error);
+        if (response.status === 401) {
+          router.push('/login');
+        }
       }
     } catch (error) {
       console.error('Error fetching storage info:', error);
@@ -145,7 +150,11 @@ export default function Dashboard() {
           totalFiles,
         }));
       } else {
-        console.error('Failed to fetch files');
+        const errorData = await response.json();
+        console.error('Error fetching files:', errorData.error);
+        if (response.status === 401) {
+          router.push('/login');
+        }
       }
     } catch (error) {
       console.error('Error fetching files:', error);
@@ -173,7 +182,8 @@ export default function Dashboard() {
         if (response.ok) {
           fetchFiles(userId!); // Refresh the file list after deletion
         } else {
-          console.error('Failed to delete file');
+          const errorData = await response.json();
+          console.error('Error deleting file:', errorData.error);
         }
       } catch (error) {
         console.error('Error deleting file:', error);
@@ -197,7 +207,8 @@ export default function Dashboard() {
         setShareLink(data.url);
         setIsShareModalOpen(true);
       } else {
-        console.error('Failed to generate share link');
+        const errorData = await response.json();
+        console.error('Error generating share link:', errorData.error);
       }
     } catch (error) {
       console.error('Error generating share link:', error);
@@ -227,7 +238,8 @@ export default function Dashboard() {
         localStorage.setItem('token', data.newToken);
         setRequires2FA(false); // Disable 2FA prompt after successful verification
       } else {
-        console.error('Invalid 2FA token');
+        const errorData = await response.json();
+        console.error('Invalid 2FA token:', errorData.error);
       }
     } catch (error) {
       console.error('Error verifying 2FA token:', error);
