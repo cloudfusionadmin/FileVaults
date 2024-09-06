@@ -78,8 +78,8 @@ export default async function handler(req, res) {
       await user.save();
     }
 
-    // Create a JWT token
-    const payload = { id: user.id };
+    // Create a JWT token with a consistent structure
+    const payload = { user: { id: user.id } }; // Updated to match other parts of your system
     const token = jwt.sign(payload, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
 
     return res.status(200).json({ token, userId: user.id, username: user.username });

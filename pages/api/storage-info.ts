@@ -6,7 +6,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Extract token from authorization headers
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Ensure the token is correctly split
+    const token = authHeader && authHeader.split(' ')[1]; // Extract token from Bearer scheme
 
     if (!token) {
       return res.status(401).json({ error: 'Unauthorized. Token missing.' });
@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let decoded;
     try {
       // Verify and decode the JWT token
-      decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as { id: string };
+      decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as { user: { id: string } };
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         return res.status(401).json({ error: 'Token expired. Please log in again.' });
@@ -24,12 +24,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Ensure that the decoded token contains the user ID
-    if (!decoded?.id) {
+    if (!decoded?.user?.id) {
       return res.status(401).json({ error: 'Invalid token payload.' });
     }
 
     // Find the user by the decoded token's ID
-    const user = await User.findOne({ where: { id: decoded.id } });
+    const user = await User.findOne({ where: { id: decoded.user.id } });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
