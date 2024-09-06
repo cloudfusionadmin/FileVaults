@@ -27,7 +27,7 @@ export default function Dashboard() {
   const [filteredFiles, setFilteredFiles] = useState<FilesByFormatType>({});
   const [storageInfo, setStorageInfo] = useState({
     used: 0,
-    capacity: 100 * 1024, // Capacity in MB for consistency, convert GB to MB
+    capacity: 100 * 1024, // Capacity in MB
     totalFiles: 0,
   });
   const [userId, setUserId] = useState<string | null>(null);
@@ -81,25 +81,24 @@ export default function Dashboard() {
     }
   }, []);
 
-   // Verify the token and ensure it's valid
-const verifyToken = async (token: string) => {
-  try {
-    const response = await fetch('/api/auth/verify-token', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+  // Verify the token and ensure it's valid
+  const verifyToken = async (token: string) => {
+    try {
+      const response = await fetch('/api/auth/verify-token', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
-    if (!response.ok) {
-      console.log('Invalid or expired token, redirecting to login.');
-      router.push('/login'); // Redirect to login if token is invalid/expired
+      if (!response.ok) {
+        console.log('Invalid or expired token, redirecting to login.');
+        router.push('/login'); // Redirect to login if token is invalid/expired
+      }
+    } catch (error) {
+      console.error('Error verifying token:', error);
+      router.push('/login');
     }
-  } catch (error) {
-    console.error('Error verifying token:', error);
-    router.push('/login');
-  }
-};
-
+  };
 
   // Fetch storage info (current storage and max storage)
   const fetchStorageInfo = async () => {
