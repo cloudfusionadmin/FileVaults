@@ -17,13 +17,14 @@ export default async function handler(req, res) {
       }
 
       let decoded;
+      let newToken = null;
       try {
         // Verify the JWT token using the secret key
         decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
       } catch (err) {
         if (err.name === 'TokenExpiredError') {
           // Try to refresh the token
-          const newToken = await refreshToken();
+          newToken = await refreshToken();
           if (!newToken) {
             return res.status(403).json({ error: 'Token expired and refresh failed.' });
           }
@@ -38,7 +39,7 @@ export default async function handler(req, res) {
       const { userId } = req.query;
 
       // Check if the userId from the token matches the userId passed in the query
-      if (decoded.id !== userId) {
+      if (decoded.user.id !== userId) {
         return res.status(403).json({ error: 'Unauthorized access to another user’s data.' });
       }
 
@@ -101,6 +102,7 @@ export default async function handler(req, res) {
         filesByFormat,
         totalFiles,
         totalSize: `${totalSizeMB.toFixed(2)} MB`, // Total size in MB
+        ...(newToken ? { token: newToken } : {}), // Send the new token back to the client if it was refreshed
       });
     } else {
       res.setHeader('Allow', ['GET']);

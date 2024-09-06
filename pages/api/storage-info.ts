@@ -14,13 +14,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     let decoded;
+    let newToken: string | null = null;
     try {
       // Verify and decode the JWT token
       decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as { user: { id: string } };
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         // Try to refresh the token
-        const newToken = await refreshToken();
+        newToken = await refreshToken();
         if (!newToken) {
           return res.status(403).json({ error: 'Token expired and refresh failed.' });
         }
@@ -44,10 +45,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Return storage info
+    // Return storage info along with a refreshed token if necessary
     return res.status(200).json({
       currentStorage: user.currentStorage,
       maxStorage: user.maxStorage,
+      ...(newToken ? { token: newToken } : {}), // Send the new token back to the client if it was refreshed
     });
   } catch (error) {
     console.error('Error fetching storage info:', error.message);
