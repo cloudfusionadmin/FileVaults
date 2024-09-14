@@ -30,12 +30,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         // Handle token refresh logic
-        newToken = await refreshToken();
-        if (!newToken) {
+        const refreshedToken = await refreshToken();
+        if (typeof refreshedToken === 'string') {
+          newToken = refreshedToken;
+          token = newToken;
+          decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as { user: { id: string } };
+        } else {
           return res.status(403).json({ error: 'Token expired and refresh failed.' });
         }
-        token = newToken;
-        decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as { user: { id: string } };
       } else {
         return res.status(403).json({ error: 'Invalid token. Please log in again.' });
       }
@@ -63,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const currentStorage = user.currentStorage || 0;
-    
+
     // Return storage info
     return res.status(200).json({
       currentStorage,
