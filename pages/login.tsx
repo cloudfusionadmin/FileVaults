@@ -29,7 +29,7 @@ export default function Login() {
         setIs2FARequired(true);
       } else if (response.ok) {
         // After login, redirect to dashboard (no need to handle token here as it's in cookies)
-        router.push('/');
+        router.push('/index');
       } else {
         const errorData = await response.json();
         setError(errorData.msg || 'Login failed');
