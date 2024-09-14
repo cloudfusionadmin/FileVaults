@@ -1,13 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import User from '../../models/User';
-import { refreshToken } from '../../utils/auth'; 
+import { refreshToken } from '../../utils/auth';
 
 // Define storage quotas for each plan
 const planStorageMap = {
-  basic: 100 * 1024 * 1024 * 1024, // 100 GB in bytes
-  standard: 250 * 1024 * 1024 * 1024, // 250 GB in bytes
-  premium: 1024 * 1024 * 1024 * 1024, // 1 TB in bytes
+  basic: { quotaGB: 100, bytes: 100 * 1024 * 1024 * 1024 }, // 100 GB in bytes
+  standard: { quotaGB: 250, bytes: 250 * 1024 * 1024 * 1024 }, // 250 GB in bytes
+  premium: { quotaGB: 1024, bytes: 1024 * 1024 * 1024 * 1024 }, // 1 TB in bytes
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -29,6 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as { user: { id: string } };
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
+        // Handle token refresh logic
         newToken = await refreshToken();
         if (!newToken) {
           return res.status(403).json({ error: 'Token expired and refresh failed.' });
@@ -44,23 +45,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Invalid token payload.' });
     }
 
+    // Fetch user from the database
     const user = await User.findOne({ where: { id: decoded.user.id } });
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Get the plan and fetch max storage based on the user's plan
-    const plan = user.plan || 'basic'; // Default to 'basic' plan if not set
-    const maxStorage = planStorageMap[plan] || 107374182400; // Use the plan to set the correct maxStorage
+    // Get the plan and corresponding storage
+    const plan = user.plan || 'basic';
+    const storageQuota = planStorageMap[plan];
+
+    // Update storage_quota_gb and maxStorage if necessary
+    if (user.storage_quota_gb !== storageQuota.quotaGB) {
+      user.storage_quota_gb = storageQuota.quotaGB;
+      user.maxStorage = storageQuota.bytes;
+      await user.save(); // Save changes in the database
+    }
 
     const currentStorage = user.currentStorage || 0;
-
+    
+    // Return storage info
     return res.status(200).json({
       currentStorage,
-      maxStorage,
-      ...(newToken ? { token: newToken } : {}), // Send new token if refreshed
+      maxStorage: user.maxStorage,
+      storageQuotaGB: user.storage_quota_gb,
+      ...(newToken ? { token: newToken } : {}),
     });
   } catch (error) {
+    console.error('Error fetching storage info:', error);
     return res.status(500).json({ error: 'Server error. Please try again later.' });
   }
 }

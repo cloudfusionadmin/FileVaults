@@ -17,6 +17,7 @@ interface UserAttributes {
   plan?: string | null;
   maxStorage: number;
   currentStorage: number;
+  storage_quota_gb: number;  // Add storage_quota_gb here
 }
 
 // Define the fields that are optional when creating a new user (e.g., auto-increment fields)
@@ -38,6 +39,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public plan!: string | null;
   public maxStorage!: number;
   public currentStorage!: number;
+  public storage_quota_gb!: number;  // Now storage_quota_gb is here
 
   // Timestamps
   public readonly createdAt!: Date;
@@ -112,6 +114,11 @@ User.init({
     defaultValue: 0,
     allowNull: false,
   },
+  storage_quota_gb: {
+    type: DataTypes.INTEGER,  // Add the storage_quota_gb field to store quota in GB
+    allowNull: false,
+    defaultValue: 100,  // Default to 100 GB
+  }
 }, {
   sequelize,
   modelName: 'User',
