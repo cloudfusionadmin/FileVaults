@@ -82,55 +82,65 @@ export default function Dashboard() {
   }, []);
 
   // Verify the token and ensure it's valid
-  const verifyToken = async (token: string) => {
-    try {
-      const response = await fetch('/api/auth/verify-token', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+const verifyToken = async (token: string) => {
+  try {
+    const response = await fetch('/api/auth/verify-token', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
 
-      if (!response.ok) {
-        console.log('Invalid or expired token, redirecting to login.');
-        localStorage.removeItem('token');
-        router.push('/login'); // Redirect to login if token is invalid/expired
-      }
-    } catch (error) {
-      console.error('Error verifying token:', error);
-      router.push('/login');
+    if (!response.ok) {
+      console.log('Invalid or expired token, redirecting to login.');
+      localStorage.removeItem('token');
+      router.push('/login'); // Redirect to login if token is invalid/expired
     }
-  };
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    router.push('/login');
+  }
+};
 
-  // Fetch storage info (current storage and max storage)
-  const fetchStorageInfo = async () => {
-    try {
-      const response = await fetch('/api/storage-info', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        // If a new token was returned, update localStorage
-        if (data.token) {
-          localStorage.setItem('token', data.token);
-        }
-  
-        // Update storage information
-        setStorageInfo({
-          used: data.currentStorage / (1024 * 1024), // Convert to MB
-          capacity: data.maxStorage / (1024 * 1024), // Convert to MB
-          totalFiles: storageInfo.totalFiles, // Keep total files as is for now
-        });
-      } else {
-        console.error('Failed to fetch storage info:', data.error);
+// Fetch storage info (current storage and max storage)
+const fetchStorageInfo = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    router.push('/login');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/storage-info', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      // If a new token was returned, update localStorage
+      if (data.token) {
+        localStorage.setItem('token', data.token);
       }
-    } catch (error) {
-      console.error('Error fetching storage info:', error);
+
+      // Update storage information
+      setStorageInfo({
+        used: data.currentStorage / (1024 * 1024), // Convert to MB
+        capacity: data.maxStorage / (1024 * 1024), // Convert to MB
+        totalFiles: storageInfo.totalFiles, // Keep total files as is for now
+      });
+    } else {
+      console.error('Failed to fetch storage info:', data.error);
+      if (response.status === 401) {
+        router.push('/login');
+      }
     }
-  };
+  } catch (error) {
+    console.error('Error fetching storage info:', error);
+  }
+};
+
   const fetchFiles = async (userId: string) => {
     try {
       const response = await fetch(`/api/fetchFiles?userId=${userId}`, {
