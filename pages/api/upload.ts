@@ -44,12 +44,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Ensure the userId passed matches the user's id
     if (user.id !== parseInt(userId)) {
-      return res.status(403).json({ error: 'Unauthorized action for the user.' });
+      return res.status(403).json({ error: 'Unauthorized action for this user.' });
     }
 
     // Check if the user has enough storage
     if (user.currentStorage + fileSize > user.maxStorage) {
-      return res.status(400).json({ error: `Insufficient storage. You have ${user.maxStorage - user.currentStorage} bytes remaining.` });
+      const remainingStorage = user.maxStorage - user.currentStorage;
+      return res.status(400).json({ error: `Insufficient storage. You have ${remainingStorage} bytes remaining.` });
     }
 
     // Proceed with file upload if storage is available
