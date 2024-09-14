@@ -29,7 +29,7 @@ export default async function handler(req, res) {
 
     // Manually set the base URL for local development
     const baseUrl = process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000' 
+      ? 'https://file-vaults-puce.vercel.app/' 
       : process.env.BASE_URL;
 
     const resetUrl = `${baseUrl}/reset-password?token=${token}`;
