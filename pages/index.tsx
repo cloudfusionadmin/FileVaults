@@ -66,116 +66,74 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     const storedUserId = localStorage.getItem('userId');
     const storedUsername = localStorage.getItem('username');
 
-    if (!token || !storedUserId || !storedUsername) {
+    if (!storedUserId || !storedUsername) {
       router.push('/login'); // Redirect to login if not authenticated
     } else {
       setUserId(storedUserId);
       setUsername(storedUsername);
-      verifyToken(token); // Check if token is valid
       fetchFiles(storedUserId); // Fetch files if authenticated
       fetchStorageInfo(); // Fetch storage info
     }
   }, []);
 
-  // Verify the token and ensure it's valid
-const verifyToken = async (token: string) => {
-  try {
-    const response = await fetch('/api/auth/verify-token', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      console.log('Invalid or expired token, redirecting to login.');
-      localStorage.removeItem('token');
-      router.push('/login'); // Redirect to login if token is invalid/expired
-    }
-  } catch (error) {
-    console.error('Error verifying token:', error);
-    router.push('/login');
-  }
-};
-
-// Fetch storage info (current storage and max storage)
-const fetchStorageInfo = async () => {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    router.push('/login');
-    return;
-  }
-
-  try {
-    const response = await fetch('/api/storage-info', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-      }
-
-      // Correctly update the storage information, including total files
-      setStorageInfo({
-        used: data.currentStorage / (1024 * 1024), // Convert from bytes to MB
-        capacity: data.maxStorage / (1024 * 1024), // Convert from bytes to MB
-        totalFiles: data.totalFiles || 0, // Update total files if available
+  // Fetch storage info (current storage and max storage)
+  const fetchStorageInfo = async () => {
+    try {
+      const response = await fetch('/api/storage-info', {
+        credentials: 'include', // Include cookies with the request
       });
-    } else {
-      console.error('Failed to fetch storage info:', data.error);
-      if (response.status === 401) {
-        router.push('/login');
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Correctly update the storage information, including total files
+        setStorageInfo({
+          used: data.currentStorage / (1024 * 1024), // Convert from bytes to MB
+          capacity: data.maxStorage / (1024 * 1024), // Convert from bytes to MB
+          totalFiles: data.totalFiles || 0, // Update total files if available
+        });
+      } else {
+        console.error('Failed to fetch storage info:', data.error);
+        if (response.status === 401) {
+          router.push('/login');
+        }
       }
+    } catch (error) {
+      console.error('Error fetching storage info:', error);
     }
-  } catch (error) {
-    console.error('Error fetching storage info:', error);
-  }
-};
+  };
 
-const fetchFiles = async (userId: string) => {
-  try {
-    const response = await fetch(`/api/fetchFiles?userId=${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-    
-    if (response.ok) {
-      const { filesByFormat, totalFiles, totalSize } = await response.json() as {
-        filesByFormat: FilesByFormatType;
-        totalFiles: number;
-        totalSize: number; // Ensure this is in bytes
-      };
+  const fetchFiles = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/fetchFiles?userId=${userId}`, {
+        credentials: 'include', // Include cookies with the request
+      });
 
-      setFilesByFormat(filesByFormat);
-      setFilteredFiles(filesByFormat);
+      if (response.ok) {
+        const { filesByFormat, totalFiles, totalSize } = await response.json();
+        setFilesByFormat(filesByFormat);
+        setFilteredFiles(filesByFormat);
 
-      // Correctly update the used storage and total files
-      setStorageInfo((prevInfo) => ({
-        ...prevInfo,
-        used: totalSize / (1024 * 1024), // Convert from bytes to MB
-        totalFiles,
-      }));
-    } else {
-      const errorData = await response.json();
-      console.error('Error fetching files:', errorData.error);
-      if (response.status === 401) {
-        router.push('/login');
+        // Correctly update the used storage and total files
+        setStorageInfo((prevInfo) => ({
+          ...prevInfo,
+          used: totalSize / (1024 * 1024), // Convert from bytes to MB
+          totalFiles,
+        }));
+      } else {
+        const errorData = await response.json();
+        console.error('Error fetching files:', errorData.error);
+        if (response.status === 401) {
+          router.push('/login');
+        }
       }
+    } catch (error) {
+      console.error('Error fetching files:', error);
     }
-  } catch (error) {
-    console.error('Error fetching files:', error);
-  }
-};
-
+  };
 
   const handleDownload = (fileUrl: string) => {
     window.open(fileUrl, '_blank');
@@ -191,9 +149,7 @@ const fetchFiles = async (userId: string) => {
       try {
         const response = await fetch(`/api/deleteFile?name=${encodeURIComponent(fileToDelete)}&userId=${userId}`, {
           method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
+          credentials: 'include',
         });
         if (response.ok) {
           fetchFiles(userId!); // Refresh the file list after deletion
@@ -214,9 +170,7 @@ const fetchFiles = async (userId: string) => {
     try {
       const response = await fetch(`/api/shareFile?name=${encodeURIComponent(fileName)}&userId=${userId}`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
+        credentials: 'include',
       });
       if (response.ok) {
         const data = await response.json();
@@ -236,7 +190,6 @@ const fetchFiles = async (userId: string) => {
     document.cookie = 'token=; Max-Age=0; path=/;';
     
     // Clear localStorage
-    localStorage.removeItem('token');
     localStorage.removeItem('userId');
     localStorage.removeItem('username');
   
@@ -249,15 +202,13 @@ const fetchFiles = async (userId: string) => {
       const response = await fetch('/api/auth/verify-2fa', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ token: twoFactorToken, userId }),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('token', data.newToken);
         setRequires2FA(false); // Disable 2FA prompt after successful verification
       } else {
         const errorData = await response.json();
