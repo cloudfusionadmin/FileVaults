@@ -14,8 +14,12 @@ export default async function handler(req, res) {
 
     // Get JWT token from the Authorization header
     const authHeader = req.headers['authorization'];
-    let token = authHeader && authHeader.split(' ')[1]; // Extract token
+    if (!authHeader) {
+      console.error('Authorization header missing.');
+      return res.status(401).json({ error: 'Unauthorized. Authorization header missing.' });
+    }
 
+    let token = authHeader && authHeader.split(' ')[1]; // Extract token
     if (!token) {
       return res.status(401).json({ error: 'Unauthorized. Token missing.' });
     }
@@ -45,6 +49,7 @@ export default async function handler(req, res) {
 
     // Check if the userId from the token matches the userId passed in the query
     if (decoded.user.id !== userId) {
+      console.error('Unauthorized access to another user’s data.');
       return res.status(403).json({ error: 'Unauthorized access to another user’s data.' });
     }
 
