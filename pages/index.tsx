@@ -232,9 +232,15 @@ const fetchFiles = async (userId: string) => {
   };
 
   const handleLogout = () => {
+    // Clear cookies
+    document.cookie = 'token=; Max-Age=0; path=/;';
+    
+    // Clear localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
     localStorage.removeItem('username');
+  
+    // Redirect to login page
     router.push('/login');
   };
 
