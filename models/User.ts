@@ -42,6 +42,12 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   // Timestamps
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
+
+  // Method to check if storage limit is exceeded
+  public hasExceededStorageLimit(): boolean {
+    return this.currentStorage > this.maxStorage;
+  }
+
 }
 
 // Define the User model with the appropriate fields
