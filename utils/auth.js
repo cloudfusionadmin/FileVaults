@@ -1,25 +1,16 @@
-// utils/auth.js
 export const refreshToken = async () => {
   try {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      console.error('No token found to refresh');
-      return null;
-    }
-
     const response = await fetch('/api/auth/refresh', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}` // Send the token in the Authorization header
-      }
+      },
+      credentials: 'include' // Ensures cookies are sent with the request
     });
 
     if (response.ok) {
-      const data = await response.json();
-      localStorage.setItem('token', data.token); // Save the new token
-      return data.token;
+      // No need to store the token, as it's now stored as an httpOnly cookie
+      return true;
     } else {
       console.error('Failed to refresh token');
       return null;
