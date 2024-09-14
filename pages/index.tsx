@@ -119,16 +119,15 @@ const fetchStorageInfo = async () => {
     const data = await response.json();
 
     if (response.ok) {
-      // If a new token was returned, update localStorage
       if (data.token) {
         localStorage.setItem('token', data.token);
       }
 
-      // Update storage information
+      // Correctly update the storage information, including total files
       setStorageInfo({
-        used: data.currentStorage / (1024 * 1024), // Convert to MB
-        capacity: data.maxStorage / (1024 * 1024), // Convert to MB
-        totalFiles: storageInfo.totalFiles, // Keep total files as is for now
+        used: data.currentStorage / (1024 * 1024), // Convert from bytes to MB
+        capacity: data.maxStorage / (1024 * 1024), // Convert from bytes to MB
+        totalFiles: data.totalFiles || 0, // Update total files if available
       });
     } else {
       console.error('Failed to fetch storage info:', data.error);
@@ -141,37 +140,42 @@ const fetchStorageInfo = async () => {
   }
 };
 
-  const fetchFiles = async (userId: string) => {
-    try {
-      const response = await fetch(`/api/fetchFiles?userId=${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      if (response.ok) {
-        const { filesByFormat, totalFiles, totalSize } = await response.json() as {
-          filesByFormat: FilesByFormatType;
-          totalFiles: number;
-          totalSize: number;
-        };
-        setFilesByFormat(filesByFormat);
-        setFilteredFiles(filesByFormat);
-        setStorageInfo((prevInfo) => ({
-          ...prevInfo,
-          used: parseFloat(totalSize.toString()),
-          totalFiles,
-        }));
-      } else {
-        const errorData = await response.json();
-        console.error('Error fetching files:', errorData.error);
-        if (response.status === 401) {
-          router.push('/login');
-        }
+const fetchFiles = async (userId: string) => {
+  try {
+    const response = await fetch(`/api/fetchFiles?userId=${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+    });
+    
+    if (response.ok) {
+      const { filesByFormat, totalFiles, totalSize } = await response.json() as {
+        filesByFormat: FilesByFormatType;
+        totalFiles: number;
+        totalSize: number; // Ensure this is in bytes
+      };
+
+      setFilesByFormat(filesByFormat);
+      setFilteredFiles(filesByFormat);
+
+      // Correctly update the used storage and total files
+      setStorageInfo((prevInfo) => ({
+        ...prevInfo,
+        used: totalSize / (1024 * 1024), // Convert from bytes to MB
+        totalFiles,
+      }));
+    } else {
+      const errorData = await response.json();
+      console.error('Error fetching files:', errorData.error);
+      if (response.status === 401) {
+        router.push('/login');
       }
-    } catch (error) {
-      console.error('Error fetching files:', error);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching files:', error);
+  }
+};
+
 
   const handleDownload = (fileUrl: string) => {
     window.open(fileUrl, '_blank');
