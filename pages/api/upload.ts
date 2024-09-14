@@ -1,8 +1,8 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken'; // For JWT handling
-import User from '../../models/User'; // Import the User model
+import jwt from 'jsonwebtoken';
+import User from '../../models/User';
 
 const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, JWT_SECRET_KEY } = process.env;
 
@@ -15,10 +15,9 @@ const s3 = new S3Client({
   },
 });
 
-// Define handler function for upload
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Extract the JWT from the Authorization header
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({ error: 'Unauthorized. Token missing.' });
@@ -37,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Fetch the user from the database using their id from the decoded token
-    const user = await User.findOne({ where: { id: decoded.id } });
+    const user = await User.findOne({ where: { id: decoded.user.id } });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -50,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Check if the user has enough storage
     if (user.currentStorage + fileSize > user.maxStorage) {
-      return res.status(400).json({ error: 'Insufficient storage.' });
+      return res.status(400).json({ error: `Insufficient storage. You have ${user.maxStorage - user.currentStorage} bytes remaining.` });
     }
 
     // Proceed with file upload if storage is available

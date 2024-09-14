@@ -7,17 +7,18 @@ export default function handler(req, res) {
     return res.status(401).json({ msg: 'No token provided or incorrect format' });
   }
 
-  const token = authHeader.split(' ')[1]; // Extract token
+  const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY, { ignoreExpiration: true }); // Ignore expiration during refresh
+    // Verify the token, ignoring expiration for refresh
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY, { ignoreExpiration: true });
     const payload = { user: { id: decoded.user.id } };
 
     // Generate a new token with a new expiry time
     const newToken = jwt.sign(
       payload,
       process.env.JWT_SECRET_KEY,
-      { expiresIn: '15m' } // Token expiration (adjust as needed)
+      { expiresIn: '15m' } // Adjust expiration time as needed
     );
 
     return res.status(200).json({ token: newToken });

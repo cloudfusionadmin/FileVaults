@@ -10,6 +10,9 @@ export default function auth(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY); // Verify token
     req.user = decoded.user; // Store user information in request object
+
+    console.log('Authenticated user:', req.user); // Add logging for debugging
+
     next(); // Proceed to next middleware or route handler
   } catch (err) {
     console.error('Token verification failed:', err.message);
