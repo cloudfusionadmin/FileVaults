@@ -14,8 +14,8 @@ export default function Login() {
 
   const handleLogin = async (event) => {
     event.preventDefault();
-    setError('');  // Reset any existing error messages
-  
+    setError('');
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -24,20 +24,12 @@ export default function Login() {
         },
         body: JSON.stringify({ email, password, twoFactorCode: is2FARequired ? twoFactorCode : null }),
       });
-  
-      // Handle 2FA requirement
+
       if (response.status === 206) {
         setIs2FARequired(true);
       } else if (response.ok) {
-        const data = await response.json();
-        if (data.token && data.userId && data.username) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('userId', data.userId);
-          localStorage.setItem('username', data.username);
-          router.push('/'); // Redirect to dashboard
-        } else {
-          setError('Invalid response from server.');
-        }
+        // After login, redirect to dashboard (no need to handle token here as it's in cookies)
+        router.push('/');
       } else {
         const errorData = await response.json();
         setError(errorData.msg || 'Login failed');
@@ -46,7 +38,6 @@ export default function Login() {
       setError('An error occurred during login. Please try again.');
     }
   };
-  
 
   return (
     <div className={styles.container}>

@@ -31,7 +31,6 @@ export default async function handler(req, res) {
     // Handle 2FA if enabled
     if (user.is2FAEnabled) {
       if (!twoFactorCode) {
-        // Generate and send a new 2FA code if not provided
         const twoFactorCodeGenerated = Math.floor(100000 + Math.random() * 900000).toString();
 
         const transporter = nodemailer.createTransport({
@@ -53,7 +52,6 @@ export default async function handler(req, res) {
 
         await transporter.sendMail(mailOptions);
 
-        // Store the hashed 2FA code and its expiry
         const hashedCode = bcrypt.hashSync(twoFactorCodeGenerated, bcrypt.genSaltSync(10));
         user.temp2FACode = hashedCode;
         user.temp2FACodeExpiry = new Date(Date.now() + 5 * 60000); // 5 minutes expiry
@@ -62,7 +60,6 @@ export default async function handler(req, res) {
         return res.status(206).json({ msg: '2FA code sent to your email' });
       }
 
-      // Verify 2FA code
       if (new Date() > user.temp2FACodeExpiry) {
         return res.status(400).json({ msg: '2FA code expired' });
       }
@@ -72,18 +69,19 @@ export default async function handler(req, res) {
         return res.status(400).json({ msg: 'Invalid 2FA code' });
       }
 
-      // Clear temp 2FA data after verification
       user.temp2FACode = null;
       user.temp2FACodeExpiry = null;
       await user.save();
     }
 
-    // Create a JWT token with a consistent structure
-    const payload = { user: { id: user.id } }; // Updated to match other parts of your system
+    // Create a JWT token
+    const payload = { user: { id: user.id } };
     const token = jwt.sign(payload, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
 
-    return res.status(200).json({ token, userId: user.id, username: user.username });
+    // Set the token in an httpOnly cookie
+    res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Secure; Path=/; SameSite=Strict; Max-Age=900`);
 
+    return res.status(200).json({ userId: user.id, username: user.username });
   } catch (err) {
     console.error('Server error:', err.message);
     return res.status(500).json({ msg: 'Server error' });
