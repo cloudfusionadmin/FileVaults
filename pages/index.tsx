@@ -185,17 +185,15 @@ export default function Dashboard() {
     }
   };
 
-  const handleLogout = () => {
-    // Clear cookies
-    document.cookie = 'token=; Max-Age=0; path=/;';
-    
-    // Clear localStorage
-    localStorage.removeItem('userId');
-    localStorage.removeItem('username');
-  
-    // Redirect to login page
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
+  
 
   const handleTwoFactorSubmit = async () => {
     try {
