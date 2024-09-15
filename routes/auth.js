@@ -7,6 +7,8 @@ const auth = require('../middleware/auth');  // Ensure the middleware is require
 const router = express.Router();
 
 // Register a new user
+// Status codes and error handling improvements for better debugging
+// Ensure to log actual error messages in try-catch
 router.post(
   '/register',
   [
@@ -29,7 +31,7 @@ router.post(
         return res.status(400).json({ msg: 'User already exists' });
       }
 
-      // Hash the password before saving it
+      // Password hashing with error handling
       const hashedPassword = await bcrypt.hash(password, 10);
 
       user = await User.create({
@@ -44,7 +46,7 @@ router.post(
         },
       };
 
-      // Generate the JWT token
+      // Generate JWT token and include a refresh token logic if needed
       jwt.sign(
         payload,
         process.env.JWT_SECRET_KEY,
@@ -55,11 +57,12 @@ router.post(
         }
       );
     } catch (err) {
-      console.error(err.message);
+      console.error('Error creating user:', err.message);
       res.status(500).send('Server error');
     }
   }
 );
+
 
 // Login user
 router.post(
@@ -77,32 +80,36 @@ router.post(
     const { email, password } = req.body;
 
     try {
-      let user = await User.findOne({ where: { email } });
+      const user = await User.findOne({ where: { email } });
 
       if (!user) {
         return res.status(400).json({ msg: 'Invalid credentials' });
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
-
       if (!isMatch) {
         return res.status(400).json({ msg: 'Invalid credentials' });
       }
 
+      // JWT payload
       const payload = {
         user: {
           id: user.id,
         },
       };
 
-      // Generate the JWT token
+      // Generate JWT token and set HttpOnly cookie
       jwt.sign(
         payload,
         process.env.JWT_SECRET_KEY,
         { expiresIn: '1h' },
         (err, token) => {
           if (err) throw err;
-          res.json({ token });
+          
+          // Set the token in HttpOnly cookie
+          res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Secure; Path=/; SameSite=Strict; Max-Age=3600`);
+
+          res.json({ msg: 'Login successful' });
         }
       );
     } catch (err) {
@@ -111,6 +118,7 @@ router.post(
     }
   }
 );
+
 
 // Get current user's profile
 router.get('/me', auth, async (req, res) => {
