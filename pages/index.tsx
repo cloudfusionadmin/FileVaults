@@ -66,27 +66,27 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch('/api/auth/verify-token', { credentials: 'include' });
-        if (response.ok) {
-          const data = await response.json();
-          setUserId(data.user.id);
-          setUsername(data.user.username);
-          fetchFiles(data.user.id);
-          fetchStorageInfo();
-        } else {
-          router.push('/login');
-        }
-      } catch (error) {
-        console.error('Auth check failed', error);
+  const checkAuth = async () => {
+    try {
+      const response = await fetch('/api/auth/verify-token', { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setUserId(data.user.id);
+        setUsername(data.user.username);
+        fetchFiles(data.user.id);
+        fetchStorageInfo();
+      } else {
         router.push('/login');
       }
-    };
-  
-    checkAuth();
-  }, []);
-  
+    } catch (error) {
+      console.error('Auth check failed', error);
+      router.push('/login');
+    }
+  };
+
+  checkAuth();
+}, []);
+
 
   // Fetch storage info (current storage and max storage)
   const fetchStorageInfo = async () => {
