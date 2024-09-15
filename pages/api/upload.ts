@@ -17,7 +17,7 @@ const s3 = new S3Client({
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = authHeader?.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({ error: 'Unauthorized. Token missing.' });
@@ -32,10 +32,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { filename, userId, fileHash, contentType } = JSON.parse(req.body);
-  const fileSize = parseInt(req.headers['content-length'] || '0'); // Parse file size from headers
+  const fileSize = parseInt(req.headers['content-length'] || '0', 10); // Safely parse file size
+
+  if (isNaN(fileSize) || fileSize <= 0) {
+    return res.status(400).json({ error: 'Invalid file size.' });
+  }
 
   try {
-    // Fetch the user from the database using their id from the decoded token
+    // Fetch the user from the database
     const user = await User.findOne({ where: { id: decoded.user.id } });
 
     if (!user) {
@@ -43,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Ensure the userId passed matches the user's id
-    if (user.id !== parseInt(userId)) {
+    if (user.id !== parseInt(userId, 10)) {
       return res.status(403).json({ error: 'Unauthorized action for this user.' });
     }
 
@@ -59,7 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       new PutObjectCommand({
         Bucket: R2_BUCKET_NAME!,
         Key: `${userId}/${fileHash}/${filename}`,  // Use the userId as a prefix in the Key
-        ContentType: contentType,
+        ContentType: contentType || 'application/octet-stream', // Default content type if not provided
       }),
       { expiresIn: 3600 }
     );
