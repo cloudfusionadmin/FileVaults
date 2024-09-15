@@ -12,18 +12,18 @@ export default function handler(req, res) {
   try {
     // Verify the token, ignoring expiration for refresh
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY, { ignoreExpiration: true });
+    if (!decoded.user || !decoded.user.id) {
+      return res.status(403).json({ msg: 'Invalid token payload' });
+    }
+
     const payload = { user: { id: decoded.user.id } };
 
     // Generate a new token with a new expiry time
-    const newToken = jwt.sign(
-      payload,
-      process.env.JWT_SECRET_KEY,
-      { expiresIn: '15m' } // Adjust expiration time as needed
-    );
+    const newToken = jwt.sign(payload, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
 
     return res.status(200).json({ token: newToken });
   } catch (err) {
     console.error('Error refreshing token:', err.message);
-    return res.status(403).json({ msg: 'Token is not valid' });
+    return res.status(403).json({ msg: 'Token is not valid or expired' });
   }
 }

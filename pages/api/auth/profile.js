@@ -8,7 +8,7 @@ export default async function handler(req, res) {
 
   try {
     // Call auth middleware to verify the token
-    auth(req, res, async () => {
+    await auth(req, res, async () => {
       if (!req.user) {
         console.error('No user found in request.');
         return res.status(401).json({ msg: 'Unauthorized: No user found in request' });
