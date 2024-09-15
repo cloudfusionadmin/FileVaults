@@ -1,6 +1,5 @@
 import AWS from 'aws-sdk';
 import jwt from 'jsonwebtoken';
-import User from '../../models/User';
 import { refreshToken } from '../../utils/auth'; // Import the refresh token utility
 
 export default async function handler(req, res) {

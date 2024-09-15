@@ -66,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const currentStorage = user.currentStorage || 0;
 
-    // Return storage info
+    // Return storage info and new token if refreshed
     return res.status(200).json({
       currentStorage,
       maxStorage: user.maxStorage,
