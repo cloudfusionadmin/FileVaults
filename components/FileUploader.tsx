@@ -27,7 +27,9 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
     const fetchStorageInfo = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/storage-info'); // Assume API route to get storage info
+        const response = await fetch('/api/storage-info', {
+          credentials: 'include', // Ensure cookies are passed
+        });
         if (!response.ok) throw new Error(`Failed to fetch storage info: ${response.statusText}`);
         
         const data = await response.json();
@@ -74,6 +76,7 @@ export function FileUploader({ onUploadSuccess, userId }: FileUploaderProps) {
             method: "POST",
             headers: {
               accept: "application/json",
+              authorization: `Bearer ${localStorage.getItem('token')}`, // Include token in the header
             },
             body: JSON.stringify({
               userId,

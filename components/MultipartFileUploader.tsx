@@ -15,8 +15,14 @@ const fetchUploadApiEndpoint = async (endpoint: string, data: any) => {
     headers: {
       accept: "application/json",
       "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem('token')}`, // Include authorization header
     },
+    credentials: 'include', // Include cookies with the request
   });
+
+  if (!res.ok) {
+    throw new Error(`Error fetching ${endpoint}: ${res.statusText}`);
+  }
 
   return res.json();
 };
@@ -54,7 +60,7 @@ export function MultipartFileUploader({
       completeMultipartUpload: (file, props) =>
         fetchUploadApiEndpoint("complete-multipart-upload", { file, ...props }),
     });
-    
+
     // Event listeners for upload progress and completion
     uppy.on("complete", (result) => {
       onUploadSuccess(result);
@@ -73,4 +79,3 @@ export function MultipartFileUploader({
 
   return <Dashboard uppy={uppy} showLinkToFileUploadResult={true} />;
 }
-
