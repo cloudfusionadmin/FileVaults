@@ -79,7 +79,7 @@ export default async function handler(req, res) {
     const token = jwt.sign(payload, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
 
     // Set the token in an httpOnly cookie
-    res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Secure; Path=/index.tsx; SameSite=Strict; Max-Age=900`);
+    res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Secure; Path=/; SameSite=Strict; Max-Age=900`);
 
     return res.status(200).json({ userId: user.id, username: user.username });
   } catch (err) {

@@ -41,8 +41,8 @@ export default async function handler(req, res) {
 
     const { userId } = req.query;
 
-    // Check if the userId from the token matches the userId passed in the query
-    if (decoded.user.id !== userId) {
+    // Ensure userId comparison works (string comparison to avoid mismatches)
+    if (String(decoded.user.id) !== String(userId)) {
       return res.status(403).json({ error: 'Unauthorized access to another user’s data.' });
     }
 
