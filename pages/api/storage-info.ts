@@ -71,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       currentStorage,
       maxStorage: user.maxStorage,
       storageQuotaGB: user.storage_quota_gb,
-      ...(newToken ? { token: newToken } : {}),
+      ...(newToken ? { token: newToken } : {}), // Include new token only if refreshed
     });
   } catch (error) {
     console.error('Error fetching storage info:', error);
