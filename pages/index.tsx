@@ -66,18 +66,27 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem('userId');
-    const storedUsername = localStorage.getItem('username');
-
-    if (!storedUserId || !storedUsername) {
-      router.push('/login'); // Redirect to login if not authenticated
-    } else {
-      setUserId(storedUserId);
-      setUsername(storedUsername);
-      fetchFiles(storedUserId); // Fetch files if authenticated
-      fetchStorageInfo(); // Fetch storage info
-    }
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/verify-token', { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          setUserId(data.user.id);
+          setUsername(data.user.username);
+          fetchFiles(data.user.id);
+          fetchStorageInfo();
+        } else {
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error('Auth check failed', error);
+        router.push('/login');
+      }
+    };
+  
+    checkAuth();
   }, []);
+  
 
   // Fetch storage info (current storage and max storage)
   const fetchStorageInfo = async () => {
