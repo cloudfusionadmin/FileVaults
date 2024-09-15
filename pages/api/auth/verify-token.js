@@ -5,13 +5,12 @@ export default function handler(req, res) {
     return res.status(405).json({ msg: 'Method not allowed' });
   }
 
-  const authHeader = req.headers['authorization'];
+  // Use token from cookies instead of Authorization header for better security
+  const token = req.cookies.token;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ msg: 'No token provided or incorrect format' });
+  if (!token) {
+    return res.status(401).json({ msg: 'No token provided' });
   }
-
-  const token = authHeader.split(' ')[1];
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
